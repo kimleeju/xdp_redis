@@ -367,7 +367,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags, void* xsk)
     int processed = 0, numevents;
     /* Nothing to do? return ASAP */
     if (!(flags & AE_TIME_EVENTS) && !(flags & AE_FILE_EVENTS)) return 0;
-
+    
     /* Note that we want call select() even if there are no
      * file events to process as long as we want to process time
      * events, in order to sleep until the next time event is ready
@@ -414,31 +414,27 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags, void* xsk)
 
         /* Call the multiplexing API, will return only on timeout or when
          * some event fires. */
- 
-        numevents = aeApiPoll(eventLoop, tvp);
+#ifdef __XDP_H
+        handle_receive_packets((struct xsk_socket_info *)xsk);
+#endif
 
+        numevents = aeApiPoll(eventLoop, tvp);
+        printf("numevents = %d\n",numevents);
         /* After sleep callback. */
         if (eventLoop->aftersleep != NULL && flags & AE_CALL_AFTER_SLEEP)
             eventLoop->aftersleep(eventLoop);
 
         for (j = 0; j < numevents; j++) {
-            printf("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww\n");
             aeFileEvent *fe = &eventLoop->events[eventLoop->fired[j].fd];
             int mask = eventLoop->fired[j].mask;
             int fd = eventLoop->fired[j].fd;
             int rfired = 0;
        
-             printf("11111111111111111\n");
 	    /* note the fe->mask & mask & ... code: maybe an already processed
              * event removed an element that fired and we still didn't
              * processed, so we check if the event is still valid. */
             if (fe->mask & mask & AE_READABLE) {
                 rfired = 1;
-
-#ifdef __XDP_H
-               //if(xsk!=NULL)
-                //handle_receive_packets((struct xsk_socket_info *)xsk);
-#endif
                 fe->rfileProc(eventLoop,fd,fe->clientData,mask);
             }
             if (fe->mask & mask & AE_WRITABLE) {

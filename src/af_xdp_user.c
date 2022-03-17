@@ -15,8 +15,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <linux/if_ether.h>
 #include <sys/resource.h>
-
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <linux/ip.h>
@@ -189,15 +189,17 @@ bool process_packet(struct xsk_socket_info *xsk,
 			   uint64_t addr, uint32_t len)
 {
     uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
-    printf("================================\n");
+    printf("pp\n");
 #if 0
+    printf("=========================\n");
     for(int i =0; i <= len; i++){
-        printf("%u",pkt[i]);
+        printf("%c",(unsigned char)pkt[i]);
     }
     printf("\n");
 #endif
 #if 0
-    struct iphdr *iph = (struct iphdr *)pkt;
+    //struct ethhdr *eth = (struct ethhdr *)pkt;
+    struct iphdr *iph = (void*)pkt + sizeof(struct ethhdr);
     unsigned short iphdrlen = iph->ihl*4;
     struct tcphdr *tcph=(struct tcphdr*)(pkt + iphdrlen);
     
@@ -278,16 +280,14 @@ void handle_receive_packets(struct xsk_socket_info *xsk)
 	unsigned int rcvd, stock_frames, i;
 	uint32_t idx_rx = 0, idx_fq = 0;
 	int ret;
-//    printf("11111\n");
 	rcvd = xsk_ring_cons__peek(&xsk->rx, RX_BATCH_SIZE, &idx_rx);
-//    printf("rcvd = %d\n",rcvd); 
     if (!rcvd)
 		return;
     printf("rcvd22 = %d\n",rcvd); 
 	/* Stuff the ring with as much frames as possible */
 	stock_frames = xsk_prod_nb_free(&xsk->umem->fq,
 					xsk_umem_free_frames(xsk));
-
+    printf("stock_frames = %d\n",stock_frames);
 	if (stock_frames > 0) {
 
 		ret = xsk_ring_prod__reserve(&xsk->umem->fq, stock_frames,
