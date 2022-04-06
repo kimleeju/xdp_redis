@@ -415,11 +415,11 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags, void* xsk)
         /* Call the multiplexing API, will return only on timeout or when
          * some event fires. */
 #ifdef __XDP_H
-        handle_receive_packets((struct xsk_socket_info *)xsk);
+       handle_receive_packets((struct xsk_socket_info *)xsk);
 #endif
 
         numevents = aeApiPoll(eventLoop, tvp);
-        printf("numevents = %d\n",numevents);
+       // printf("numevents = %d\n",numevents);
         /* After sleep callback. */
         if (eventLoop->aftersleep != NULL && flags & AE_CALL_AFTER_SLEEP)
             eventLoop->aftersleep(eventLoop);

@@ -614,7 +614,7 @@ int xsk_socket__create(struct xsk_socket **xsk_ptr, const char *ifname,
 
 	xsk->outstanding_tx = 0;
 	xsk->queue_id = queue_id;
-	xsk->umem = umem;
+    xsk->umem = umem;
 	xsk->ifindex = if_nametoindex(ifname);
 	if (!xsk->ifindex) {
 		err = -errno;

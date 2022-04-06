@@ -1909,10 +1909,12 @@ void initServer(void) {
     server.cfg.ifindex = -1;
     server.cfg.do_unload = false;
     server.cfg.xdp_flags = 0;
-    strcpy(server.cfg.filename,"");
+    strcpy(server.cfg.filename,"/home/ljkim/xdp/pmem-redis/af_xdp_kern.o");
     strcpy(server.cfg.progsec,"xdp_sock");
-    server.cfg.xsk_if_queue = 0; 
-
+    //server.cfg.xsk_if_queue = 0; 
+    server.cfg.xsk_bind_flags &= XDP_COPY;
+    
+    server.cfg.xsk_bind_flags |= XDP_ZEROCOPY;
     server.cfg.ifname = (char *)server.cfg.ifname_buf;
     strncpy(server.cfg.ifname, "eno2", IF_NAMESIZE);
     server.cfg.ifindex = if_nametoindex(server.cfg.ifname);
@@ -1929,8 +1931,9 @@ void initServer(void) {
     server.umem = configure_xsk_umem(server.packet_buffer, packet_buffer_size);
     /* Open and configure the AF_XDP (xsk) socket */
     server.xsk_socket = xsk_configure_socket(&server.cfg, server.umem);
-    //while(1)
-    //    handle_receive_packets(server.xsk_socket);
+    
+//    while(1)
+//        handle_receive_packets(server.xsk_socket);
     //rx_and_process(&server.cfg, server.xsk_socket);
 #endif
 

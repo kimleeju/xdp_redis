@@ -29,8 +29,8 @@
 
 inline __u32 xsk_ring_prod__free(struct xsk_ring_prod *r)
 {
-	r->cached_cons = *r->consumer + r->size;
-	return r->cached_cons - r->cached_prod;
+    r->cached_cons = *r->consumer + r->size;
+    return r->cached_cons - r->cached_prod;
 }
 
 
@@ -38,164 +38,206 @@ bool global_exit;
 
 struct xsk_umem_info *configure_xsk_umem(void *buffer, uint64_t size)
 {
-	struct xsk_umem_info *umem;
-	int ret;
+    struct xsk_umem_info *umem;
+    int ret;
 
-	umem = calloc(1, sizeof(*umem));
-	if (!umem)
-		return NULL;
+    umem = calloc(1, sizeof(*umem));
+    if (!umem)
+        return NULL;
 
-	ret = xsk_umem__create(&umem->umem, buffer, size, &umem->fq, &umem->cq,
-			       NULL);
-	if (ret) {
-		errno = -ret;
-		return NULL;
-	}
+    ret = xsk_umem__create(&umem->umem, buffer, size, &umem->fq, &umem->cq,
+            NULL);
+    if (ret) {
+        errno = -ret;
+        return NULL;
+    }
 
-	umem->buffer = buffer;
-	return umem;
+    umem->buffer = buffer;
+    return umem;
 }
 
 uint64_t xsk_alloc_umem_frame(struct xsk_socket_info *xsk)
 {
-	uint64_t frame;
-	if (xsk->umem_frame_free == 0)
-		return INVALID_UMEM_FRAME;
+    uint64_t frame;
+    if (xsk->umem_frame_free == 0)
+        return INVALID_UMEM_FRAME;
 
-	frame = xsk->umem_frame_addr[--xsk->umem_frame_free];
-	xsk->umem_frame_addr[xsk->umem_frame_free] = INVALID_UMEM_FRAME;
-	return frame;
+    frame = xsk->umem_frame_addr[--xsk->umem_frame_free];
+    xsk->umem_frame_addr[xsk->umem_frame_free] = INVALID_UMEM_FRAME;
+    return frame;
 }
 
 void xsk_free_umem_frame(struct xsk_socket_info *xsk, uint64_t frame)
 {
-	assert(xsk->umem_frame_free < NUM_FRAMES);
+    assert(xsk->umem_frame_free < NUM_FRAMES);
 
-	xsk->umem_frame_addr[xsk->umem_frame_free++] = frame;
+    xsk->umem_frame_addr[xsk->umem_frame_free++] = frame;
 }
 
 uint64_t xsk_umem_free_frames(struct xsk_socket_info *xsk)
 {
-	return xsk->umem_frame_free;
+    return xsk->umem_frame_free;
 }
 
 struct xsk_socket_info *xsk_configure_socket(struct config *cfg,
-						    struct xsk_umem_info *umem)
+        struct xsk_umem_info *umem)
 {
-	struct xsk_socket_config xsk_cfg;
-	struct xsk_socket_info *xsk_info;
-	uint32_t idx;
-	uint32_t prog_id = 0;
-	int i;
-	int ret;
+    struct xsk_socket_config xsk_cfg;
+    struct xsk_socket_info *xsk_info;
+    uint32_t idx;
+    uint32_t prog_id = 0;
+    int i;
+    int ret;
 
-	xsk_info = calloc(1, sizeof(*xsk_info));
-	if (!xsk_info)
-		return NULL;
+    xsk_info = calloc(1, sizeof(*xsk_info));
+    if (!xsk_info)
+        return NULL;
 
-	xsk_info->umem = umem;
-	xsk_cfg.rx_size = XSK_RING_CONS__DEFAULT_NUM_DESCS;
-	xsk_cfg.tx_size = XSK_RING_PROD__DEFAULT_NUM_DESCS;
-	xsk_cfg.libbpf_flags = 0;
-	xsk_cfg.xdp_flags = cfg->xdp_flags;
-	xsk_cfg.bind_flags = cfg->xsk_bind_flags;
-	ret = xsk_socket__create(&xsk_info->xsk, cfg->ifname,
-				 cfg->xsk_if_queue, umem->umem, &xsk_info->rx,
-				 &xsk_info->tx, &xsk_cfg);
+    xsk_info->umem = umem;
+    xsk_cfg.rx_size = XSK_RING_CONS__DEFAULT_NUM_DESCS;
+    xsk_cfg.tx_size = XSK_RING_PROD__DEFAULT_NUM_DESCS;
+    xsk_cfg.libbpf_flags = 0;
+    xsk_cfg.xdp_flags = cfg->xdp_flags;
+    xsk_cfg.bind_flags = cfg->xsk_bind_flags;
+    ret = xsk_socket__create(&xsk_info->xsk, cfg->ifname,
+            cfg->xsk_if_queue, umem->umem, &xsk_info->rx,
+            &xsk_info->tx, &xsk_cfg);
 
-	if (ret)
-		goto error_exit;
+    if (ret)
+        goto error_exit;
 
-	ret = bpf_get_link_xdp_id(cfg->ifindex, &prog_id, cfg->xdp_flags);
-	if (ret)
-		goto error_exit;
+    ret = bpf_get_link_xdp_id(cfg->ifindex, &prog_id, cfg->xdp_flags);
+    if (ret)
+        goto error_exit;
 
-	/* Initialize umem frame allocation */
+    /* Initialize umem frame allocation */
 
-	for (i = 0; i < NUM_FRAMES; i++)
-		xsk_info->umem_frame_addr[i] = i * FRAME_SIZE;
+    for (i = 0; i < NUM_FRAMES; i++)
+        xsk_info->umem_frame_addr[i] = i * FRAME_SIZE;
 
-	xsk_info->umem_frame_free = NUM_FRAMES;
+    xsk_info->umem_frame_free = NUM_FRAMES;
 
-	/* Stuff the receive path with buffers, we assume we have enough */
-	ret = xsk_ring_prod__reserve(&xsk_info->umem->fq,
-				     XSK_RING_PROD__DEFAULT_NUM_DESCS,
-				     &idx);
+    /* Stuff the receive path with buffers, we assume we have enough */
+    ret = xsk_ring_prod__reserve(&xsk_info->umem->fq,
+            XSK_RING_PROD__DEFAULT_NUM_DESCS,
+            &idx);
 
-	if (ret != XSK_RING_PROD__DEFAULT_NUM_DESCS)
-		goto error_exit;
+    if (ret != XSK_RING_PROD__DEFAULT_NUM_DESCS)
+        goto error_exit;
 
-	for (i = 0; i < XSK_RING_PROD__DEFAULT_NUM_DESCS; i ++)
-		*xsk_ring_prod__fill_addr(&xsk_info->umem->fq, idx++) =
-			xsk_alloc_umem_frame(xsk_info);
+    for (i = 0; i < XSK_RING_PROD__DEFAULT_NUM_DESCS; i ++)
+        *xsk_ring_prod__fill_addr(&xsk_info->umem->fq, idx++) =
+            xsk_alloc_umem_frame(xsk_info);
 
-	xsk_ring_prod__submit(&xsk_info->umem->fq,
-			      XSK_RING_PROD__DEFAULT_NUM_DESCS);
+    xsk_ring_prod__submit(&xsk_info->umem->fq,
+            XSK_RING_PROD__DEFAULT_NUM_DESCS);
 
-	return xsk_info;
+    return xsk_info;
 
 error_exit:
-	errno = -ret;
-	return NULL;
+    errno = -ret;
+    return NULL;
 }
 
 void complete_tx(struct xsk_socket_info *xsk)
 {
-	unsigned int completed;
-	uint32_t idx_cq;
+    unsigned int completed;
+    uint32_t idx_cq;
 
-	if (!xsk->outstanding_tx)
-		return;
+    if (!xsk->outstanding_tx)
+        return;
 
-	sendto(xsk_socket__fd(xsk->xsk), NULL, 0, MSG_DONTWAIT, NULL, 0);
+    sendto(xsk_socket__fd(xsk->xsk), NULL, 0, MSG_DONTWAIT, NULL, 0);
 
 
-	/* Collect/free completed TX buffers */
-	completed = xsk_ring_cons__peek(&xsk->umem->cq,
-					XSK_RING_CONS__DEFAULT_NUM_DESCS,
-					&idx_cq);
+    /* Collect/free completed TX buffers */
+    completed = xsk_ring_cons__peek(&xsk->umem->cq,
+            XSK_RING_CONS__DEFAULT_NUM_DESCS,
+            &idx_cq);
 
-	if (completed > 0) {
-		for (int i = 0; i < completed; i++)
-			xsk_free_umem_frame(xsk,
-					    *xsk_ring_cons__comp_addr(&xsk->umem->cq,
-								      idx_cq++));
+    if (completed > 0) {
+        for (int i = 0; i < completed; i++)
+            xsk_free_umem_frame(xsk,
+                    *xsk_ring_cons__comp_addr(&xsk->umem->cq,
+                        idx_cq++));
 
-		xsk_ring_cons__release(&xsk->umem->cq, completed);
-		xsk->outstanding_tx -= completed < xsk->outstanding_tx ?
-			completed : xsk->outstanding_tx;
-	}
+        xsk_ring_cons__release(&xsk->umem->cq, completed);
+        xsk->outstanding_tx -= completed < xsk->outstanding_tx ?
+            completed : xsk->outstanding_tx;
+    }
 }
 
 inline __sum16 csum16_add(__sum16 csum, __be16 addend)
 {
-	uint16_t res = (uint16_t)csum;
+    uint16_t res = (uint16_t)csum;
 
-	res += (__u16)addend;
-	return (__sum16)(res + (res < (__u16)addend));
+    res += (__u16)addend;
+    return (__sum16)(res + (res < (__u16)addend));
 }
 
 inline __sum16 csum16_sub(__sum16 csum, __be16 addend)
 {
-	return csum16_add(csum, ~addend);
+    return csum16_add(csum, ~addend);
 }
 
 inline void csum_replace2(__sum16 *sum, __be16 old, __be16 new)
 {
-	*sum = ~csum16_add(csum16_sub(~(*sum), old), new);
+    *sum = ~csum16_add(csum16_sub(~(*sum), old), new);
 }
 
 bool process_packet(struct xsk_socket_info *xsk,
-			   uint64_t addr, uint32_t len)
+        uint64_t addr, uint32_t len)
 {
     uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
-    printf("pp\n");
-#if 0
+#if 1
+    bool set = false;
+    int i,j,cnt=0;
     printf("=========================\n");
-    for(int i =0; i <= len; i++){
-        printf("%c",(unsigned char)pkt[i]);
+
+#if 1 
+    for(i = 66 ; i < len ; ++i){
+        printf("%c",pkt[i]);
+
     }
+#endif
+
+#if 0
+    for(i =0; i <= len-1; i++){
+        
+        if(pkt[i]=='*' && pkt[i+1] == '3'){
+            set = true;
+            //cnt++;
+        }
+        if(set && pkt[i] == '$')
+            cnt++;
+        if(cnt == 3){
+            j=i++;
+            
+            while(1){
+    
+                printf("%c",pkt[j+1]);
+                if(pkt[j] == '\r' && pkt[j+1] == '\n')
+                    break;
+                j++;
+            }
+
+            cnt=0;
+        }
+
+#if 0
+        if(pkt[i] == '$'){
+             
+
+
+        }
+#endif
+        //printf("%c",(unsigned char)pkt[i]);
+    }
+#endif
     printf("\n");
+
+
+
 #endif
 #if 0
     //struct ethhdr *eth = (struct ethhdr *)pkt;
@@ -280,14 +322,13 @@ void handle_receive_packets(struct xsk_socket_info *xsk)
 	unsigned int rcvd, stock_frames, i;
 	uint32_t idx_rx = 0, idx_fq = 0;
 	int ret;
-	rcvd = xsk_ring_cons__peek(&xsk->rx, RX_BATCH_SIZE, &idx_rx);
+
+    rcvd = xsk_ring_cons__peek(&xsk->rx, RX_BATCH_SIZE, &idx_rx);
     if (!rcvd)
 		return;
-    printf("rcvd22 = %d\n",rcvd); 
-	/* Stuff the ring with as much frames as possible */
+    /* Stuff the ring with as much frames as possible */
 	stock_frames = xsk_prod_nb_free(&xsk->umem->fq,
 					xsk_umem_free_frames(xsk));
-    printf("stock_frames = %d\n",stock_frames);
 	if (stock_frames > 0) {
 
 		ret = xsk_ring_prod__reserve(&xsk->umem->fq, stock_frames,

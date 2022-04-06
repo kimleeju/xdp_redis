@@ -10,6 +10,8 @@
 #ifndef __XDP_STATS_KERN_USER_H
 #warning "You forgot to #include <../common/xdp_stats_kern_user.h>"
 #include <../common/xdp_stats_kern_user.h>
+
+//#include </home/ljkim/xdp/pmem-redis/common/xdp_stats_kern_user.h>
 #endif
 
 /* Keeps stats per (enum) xdp_action */
