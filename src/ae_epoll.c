@@ -111,11 +111,8 @@ static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
             tvp ? (tvp->tv_sec*1000 + tvp->tv_usec/1000) : -1);
     if (retval > 0) {
         int j;
-
- //       printf("zzzzzzzzzzzzzzzzzzzzzz\n");
         numevents = retval;
         for (j = 0; j < numevents; j++) {
-         //   printf("numevents = %d\n",numevents);
             int mask = 0;
             struct epoll_event *e = state->events+j;
         

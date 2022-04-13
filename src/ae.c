@@ -47,8 +47,6 @@
 
 #endif
 
-
-
 #include "zmalloc.h"
 #include "config.h"
 
@@ -415,7 +413,8 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags, void* xsk)
         /* Call the multiplexing API, will return only on timeout or when
          * some event fires. */
 #ifdef __XDP_H
-       handle_receive_packets((struct xsk_socket_info *)xsk);
+       handle_receive_packets((struct xsk_socket_info *)xsk); 
+       //printf("1111111111 server.pmem_kind = %p\n",server.pmem_kind);
 #endif
 
         numevents = aeApiPoll(eventLoop, tvp);
@@ -440,9 +439,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags, void* xsk)
             if (fe->mask & mask & AE_WRITABLE) {
                 if (!rfired || fe->wfileProc != fe->rfileProc)
                 {
-                    printf("11111111111111111\n");
                     fe->wfileProc(eventLoop,fd,fe->clientData,mask);
-                    printf("QQQQQQQQQQQQQQQQQQQQQQQQ\n");
                 }            
             }
             processed++;

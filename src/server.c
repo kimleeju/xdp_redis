@@ -37,10 +37,6 @@
 #include "libpmem.h"
 #endif
 
-#ifdef __XDP_H
-//#include "af_xdp_user.h"
-#endif
-
 #include "atomicvar.h"
 
 #include <time.h>

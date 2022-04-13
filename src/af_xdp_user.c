@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+#include "server.h"
 #include "af_xdp_user.h"
 #include "print.h"
 #include <stdio.h>
@@ -189,74 +190,39 @@ bool process_packet(struct xsk_socket_info *xsk,
         uint64_t addr, uint32_t len)
 {
     uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
-#if 1
-    bool set = false;
-    int i,j,cnt=0;
-    printf("=========================\n");
+   
 
-#if 1 
-    for(i = 66 ; i < len ; ++i){
+    int i,j=0,cnt=0;
+    char v_size[10] = {0};
+    printf("=================================\n");
+#if 0
+    for(i =66 ; i < len ; ++i){
         printf("%c",pkt[i]);
-
     }
-#endif
-
-#if 0
-    for(i =0; i <= len-1; i++){
-        
-        if(pkt[i]=='*' && pkt[i+1] == '3'){
-            set = true;
-            //cnt++;
-        }
-        if(set && pkt[i] == '$')
-            cnt++;
-        if(cnt == 3){
-            j=i++;
-            
-            while(1){
-    
-                printf("%c",pkt[j+1]);
-                if(pkt[j] == '\r' && pkt[j+1] == '\n')
-                    break;
-                j++;
-            }
-
-            cnt=0;
-        }
-
-#if 0
-        if(pkt[i] == '$'){
-             
-
-
-        }
-#endif
-        //printf("%c",(unsigned char)pkt[i]);
-    }
-#endif
     printf("\n");
-
-
-
 #endif
-#if 0
-    //struct ethhdr *eth = (struct ethhdr *)pkt;
-    struct iphdr *iph = (void*)pkt + sizeof(struct ethhdr);
-    unsigned short iphdrlen = iph->ihl*4;
-    struct tcphdr *tcph=(struct tcphdr*)(pkt + iphdrlen);
-    
-    printf("IP Header\n");
-	printf("iphdrlen = %d\n",iphdrlen);
-    PrintData(pkt,iphdrlen);
-		
-	printf("TCP Header\n");
-	PrintData(pkt+iphdrlen,tcph->doff*4);
-		
-	printf("Data Payload\n");	
-	PrintData(pkt + iphdrlen + tcph->doff*4 , (len - tcph->doff*4-iph->ihl*4) );
-#endif
-    //PrintData(pkt+iphdrlen+tcph->doff*4+42,len-tcph->doff*4-iph->ihl*4-42);
-        /* Lesson#3: Write an IPv6 ICMP ECHO parser to send responses
+    //printf("server.port = %d\n",server.port);
+    if( (pkt[74] == 'S' || pkt[74] == 's') && (pkt[75] == 'E' || pkt[75] == 'e') && (pkt[76] == 'T' || pkt[76] == 't')) {
+        for(i = 79 ; i < len ; ++i){
+            if(pkt[i] == '$')
+                cnt++;
+
+            if(cnt == 2){
+                while(1){
+                    v_size[j++]=pkt[++i];
+                    
+                    if(pkt[i] == '\r')
+                        break;
+                }
+                break;
+            }
+        }
+
+        printf("value size = %d\n",atoi(v_size));
+    }
+    int port = server.port;
+    printf("server.pmem_kind = %p\n",server.pmem_kind);
+/* Lesson#3: Write an IPv6 ICMP ECHO parser to send responses
 	 *
 	 * Some assumptions to make it easier:
 	 * - No VLAN handling
@@ -317,7 +283,7 @@ bool process_packet(struct xsk_socket_info *xsk,
 	return false;
 }
 
-void handle_receive_packets(struct xsk_socket_info *xsk)
+int handle_receive_packets(struct xsk_socket_info *xsk)
 {
 	unsigned int rcvd, stock_frames, i;
 	uint32_t idx_rx = 0, idx_fq = 0;

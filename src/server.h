@@ -30,7 +30,6 @@
 
 #ifndef __REDIS_H
 #define __REDIS_H
-//#define __BPF_H
 
 #include "fmacros.h"
 #include "config.h"

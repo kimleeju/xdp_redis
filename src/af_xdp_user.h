@@ -63,7 +63,7 @@ bool process_packet(struct xsk_socket_info *xsk,
            uint64_t addr, uint32_t len);
 
 
-void handle_receive_packets(struct xsk_socket_info *xsk);
+int handle_receive_packets(struct xsk_socket_info *xsk);
 
 void rx_and_process(struct config *cfg,
            struct xsk_socket_info *xsk_socket);

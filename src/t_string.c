@@ -90,7 +90,6 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
         addReply(c, abort_reply ? abort_reply : shared.nullbulk);
         return;
     }
-
 #ifdef USE_NVM
     if(val->encoding == OBJ_ENCODING_RAW) {
         val->ptr = sdsmvtonvm(val->ptr);
@@ -107,6 +106,7 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
     if (expire) notifyKeyspaceEvent(NOTIFY_GENERIC,
         "expire",key,c->db->id);
     addReply(c, ok_reply ? ok_reply : shared.ok);
+   // printf("%s\n",c->buf);
 }
 
 /* SET key value [NX] [XX] [EX <seconds>] [PX <milliseconds>] */
@@ -188,6 +188,7 @@ int getGenericCommand(client *c) {
 
 void getCommand(client *c) {
     getGenericCommand(c);
+//    printf("%s\n",c->buf);
 }
 
 void getsetCommand(client *c) {
