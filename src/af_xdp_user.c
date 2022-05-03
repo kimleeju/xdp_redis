@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 #include "server.h"
+#include "sds.h"
 #include "af_xdp_user.h"
 #include "print.h"
 #include <stdio.h>
@@ -194,8 +195,9 @@ bool process_packet(struct xsk_socket_info *xsk,
 
     int i,j=0,cnt=0;
     char v_size[10] = {0};
+    char* value;
     printf("=================================\n");
-#if 0
+#if 1
     for(i =66 ; i < len ; ++i){
         printf("%c",pkt[i]);
     }
@@ -217,12 +219,16 @@ bool process_packet(struct xsk_socket_info *xsk,
                 break;
             }
         }
-
         printf("value size = %d\n",atoi(v_size));
+        value = (char*)malloc(sizeof(char*)*(atoi(v_size)+1));
+        strncpy(value,pkt+i+2,atoi(v_size));
     }
+    //printf("%s\n",value);
     int port = server.port;
-    printf("server.pmem_kind = %p\n",server.pmem_kind);
-/* Lesson#3: Write an IPv6 ICMP ECHO parser to send responses
+//    printf("server.pmem_kind = %p\n",server.pmem_kind);
+//    sds s = sdsmvtonvm(value);
+//    printf("sds = %s\n",s);
+    /* Lesson#3: Write an IPv6 ICMP ECHO parser to send responses
 	 *
 	 * Some assumptions to make it easier:
 	 * - No VLAN handling

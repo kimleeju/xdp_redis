@@ -12,11 +12,14 @@
 # Dependencies are stored in the Makefile.dep file. To rebuild this file
 # Just use 'make dep', but this is only needed by developers.
 
+XDP_TARGETS  := af_xdp_kern
 
 LLC ?= llc 
 CLANG ?= clang
 CC ?= gcc 
 
+XDP_C = ${XDP_TARGETS:=.c}
+XDP_OBJ = ${XDP_C:.c=.o}
 
 # Expect this is defined by including Makefile, but define if not
 COMMON_DIR ?= ../common/
@@ -30,17 +33,20 @@ COMMON_OBJS += $(COMMON_DIR)/common_params.o $(COMMON_DIR)/common_user_bpf_xdp.o
 # Create expansions for dependencies
 COMMON_H := ${COMMON_OBJS:.o=.h}
 
+KERN_USER_H ?= $(wildcard common_kern_user.h)
 CFLAGS ?= -I$(LIBBPF_DIR)/build/usr/include/ -g
 CFLAGS += -I../headers/
 LDFLAGS ?= -L$(LIBBPF_DIR)
 
-#BPF_CFLAGS ?= -I$(LIBBPF_DIR)/build/usr/include/ -I../headers/
+BPF_CFLAGS ?= -I$(LIBBPF_DIR)/build/usr/include/ -I../headers/
 
 LIBS = -l:libbpf.a -lelf $(USER_LIBS)
 
 ll: llvm-check $(USER_TARGETS)
 #
 .PHONY: clean $(CLANG) $(LLC)
+
+EXTRA_DEPS += $(COMMON_DIR)/xdp_stats_kern.h $(COMMON_DIR)/xdp_stats_kern_user.h
 
 llvm-check: $(CLANG) $(LLC)
 	@for TOOL in $^ ; do \
@@ -64,10 +70,22 @@ $(COMMON_OBJS): %.o: %.h
 	make -C $(COMMON_DIR)
 
 
+$(XDP_OBJ): %.o: %.c  Makefile $(KERN_USER_H) $(EXTRA_DEPS) $(OBJECT_LIBBPF)
+	$(CLANG) -S \
+	    -target bpf \
+	    -D __BPF_TRACING__ \
+	    $(BPF_CFLAGS) \
+	    -Wall \
+	    -Wno-unused-value \
+	    -Wno-pointer-sign \
+	    -Wno-compare-distinct-pointer-types \
+	    -Werror \
+        -I../deps/lua/src \
+	    -O2 -emit-llvm -c -g -o ${@:.o=.ll} $<
+	$(LLC) -march=bpf -filetype=obj -o $@ ${@:.o=.ll}
 
 
-
-
+#-I../deps/lua/src \
 
 
 
@@ -243,7 +261,7 @@ endif
 
 REDIS_SERVER_NAME=redis-server
 REDIS_SENTINEL_NAME=redis-sentinel
-REDIS_SERVER_OBJ=adlist.o quicklist.o print.o ae.o anet.o dict.o server.o sds.o zmalloc.o lzf_c.o lzf_d.o pqsort.o zipmap.o sha1.o ziplist.o release.o networking.o util.o object.o db.o replication.o rdb.o t_string.o t_list.o t_set.o t_zset.o t_hash.o config.o aof.o pubsub.o multi.o debug.o sort.o intset.o syncio.o cluster.o crc16.o endianconv.o slowlog.o scripting.o bio.o rio.o rand.o memtest.o crc64.o bitops.o sentinel.o notify.o setproctitle.o blocked.o hyperloglog.o latency.o sparkline.o redis-check-rdb.o redis-check-aof.o geo.o lazyfree.o module.o evict.o expire.o geohash.o geohash_helper.o childinfo.o defrag.o siphash.o rax.o nvm.o af_xdp_user.o
+REDIS_SERVER_OBJ=adlist.o quicklist.o print.o ae.o af_xdp_user.o anet.o dict.o server.o sds.o zmalloc.o lzf_c.o lzf_d.o pqsort.o zipmap.o sha1.o ziplist.o release.o networking.o util.o object.o db.o replication.o rdb.o t_string.o t_list.o t_set.o t_zset.o t_hash.o config.o aof.o pubsub.o multi.o debug.o sort.o intset.o syncio.o cluster.o crc16.o endianconv.o slowlog.o scripting.o bio.o rio.o rand.o memtest.o crc64.o bitops.o sentinel.o notify.o setproctitle.o blocked.o hyperloglog.o latency.o sparkline.o redis-check-rdb.o redis-check-aof.o geo.o lazyfree.o module.o evict.o expire.o geohash.o geohash_helper.o childinfo.o defrag.o siphash.o rax.o nvm.o 
 
 ifeq ($(AEP_COW),yes)
     REDIS_SERVER_OBJ += nvm_cow.o
@@ -260,7 +278,7 @@ REDIS_CHECK_AOF_NAME=redis-check-aof
 #REDIS_CHECK_AOF_OBJ=redis-check-aof.o
 
 
-TARGETS = $(REDIS_SERVER_NAME) $(REDIS_CHECK_RDB_NAME) $(REDIS_BENCHMARK_NAME) $(REDIS_BENCHMARK_SEQ_NAME) $(REDIS_CLI_NAME) $(REDIS_CHECK_AOF_NAME)  $(REDIS_SENTINEL_NAME)
+TARGETS = $(REDIS_SERVER_NAME) $(REDIS_CHECK_RDB_NAME) $(REDIS_BENCHMARK_NAME) $(REDIS_BENCHMARK_SEQ_NAME) $(REDIS_CLI_NAME) $(REDIS_CHECK_AOF_NAME)  $(REDIS_SENTINEL_NAME) $(XDP_OBJ)
 
 all: $(TARGETS)
 	@echo ""
@@ -347,6 +365,7 @@ dict-benchmark: dict.c zmalloc.c sds.c siphash.c
 clean:
 	rm -rf $(REDIS_SERVER_NAME) $(REDIS_SENTINEL_NAME) $(REDIS_CLI_NAME) $(REDIS_BENCHMARK_NAME) $(REDIS_BENCHMARK_SEQ_NAME) $(REDIS_CHECK_RDB_NAME) $(REDIS_CHECK_AOF_NAME) *.o *.gcda *.gcno *.gcov redis.info lcov-html Makefile.dep dict-benchmark
 	rm -rf $(LIBBPF_DIR)/build
+	rm -rf *.ll $(XDP_OBJ)
 	$(MAKE) -C $(LIBBPF_DIR) clean
 	$(MAKE) -C $(COMMON_DIR) clean
 
@@ -411,3 +430,4 @@ install: all
 	$(REDIS_INSTALL) $(REDIS_CHECK_RDB_NAME) $(INSTALL_BIN)
 	$(REDIS_INSTALL) $(REDIS_CHECK_AOF_NAME) $(INSTALL_BIN)
 	@ln -sf $(REDIS_SERVER_NAME) $(INSTALL_BIN)/$(REDIS_SENTINEL_NAME)
+
