@@ -192,6 +192,7 @@
 #include "redisassert.h"
 #ifdef USE_NVM
 #include "nvm.h"
+//extern int is_nvm_addr(const void* ptr);
 #endif
 
 #define ZIP_END 255         /* Special "end of ziplist" entry. */

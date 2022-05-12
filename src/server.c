@@ -405,6 +405,7 @@ err:
 }
 
 /* Return the UNIX time in microseconds */
+#if 0
 long long ustime(void) {
     struct timeval tv;
     long long ust;
@@ -414,7 +415,7 @@ long long ustime(void) {
     ust += tv.tv_usec;
     return ust;
 }
-
+#endif
 /* Return the UNIX time in milliseconds */
 mstime_t mstime(void) {
     return ustime()/1000;
@@ -1899,64 +1900,7 @@ void * redisduplicatenvmaddr(void *addr) {
 #endif
 
 void initServer(void) {
-
 #ifdef __XDP_H
-    uint64_t packet_buffer_size;
-    server.cfg.ifindex = -1;
-    server.cfg.do_unload = false;
-//    server.cfg.xdp_flags = 0;
-    strcpy(server.cfg.filename,"src/af_xdp_kern.o");
-    //strcpy(server.cfg.filename,"/home/ljkim/xdp/pmem-redis/src/af_xdp_kern.o");
-    strcpy(server.cfg.progsec,"xdp_sock");
-    //server.cfg.xsk_if_queue = 0; 
-    server.cfg.xsk_bind_flags &= XDP_COPY;
-    int xsks_map_fd;
-    struct bpf_object *bpf_obj = NULL;
-    
-    server.cfg.xsk_bind_flags |= XDP_ZEROCOPY;
-    server.cfg.ifname = (char *)server.cfg.ifname_buf;
-    strncpy(server.cfg.ifname, "eno2", IF_NAMESIZE);
-    server.cfg.ifindex = if_nametoindex(server.cfg.ifname);
-
-    /* Load custom program if configured */
-    if (server.cfg.filename[0] != 0) {
-        struct bpf_map *map;
-
-        bpf_obj = load_bpf_and_xdp_attach(&server.cfg);
-        if (!bpf_obj) {
-            /* Error handling done in load_bpf_and_xdp_attach() */
-            exit(EXIT_FAILURE);
-        }   
-
-        /* We also need to load the xsks_map */
-        map = bpf_object__find_map_by_name(bpf_obj, "xsks_map");
-        xsks_map_fd = bpf_map__fd(map);
-        if (xsks_map_fd < 0) {
-            fprintf(stderr, "ERROR: no xsks map found: %s\n",
-                strerror(xsks_map_fd));
-            exit(EXIT_FAILURE);
-        }   
-    }   
-
-    packet_buffer_size = NUM_FRAMES * FRAME_SIZE;
-    
-    if (posix_memalign(&server.packet_buffer,
-               getpagesize(), /* PAGE_SIZE aligned */
-               packet_buffer_size)) {
-        fprintf(stderr, "ERROR: Can't allocate buffer memory \"%s\"\n",
-            strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    /* Initialize shared packet_buffer for umem usage */
-    server.umem = configure_xsk_umem(server.packet_buffer, packet_buffer_size);
-    /* Open and configure the AF_XDP (xsk) socket */
-    server.xsk_socket = xsk_configure_socket(&server.cfg, server.umem);
-    
-//    while(1)
-//        handle_receive_packets(server.xsk_socket);
-    //rx_and_process(&server.cfg, server.xsk_socket);
-#endif
-
     int j;
 
     signal(SIGHUP, SIG_IGN);
@@ -2138,6 +2082,65 @@ void initServer(void) {
 #ifdef USE_NVM
     allocateNVMSpace();
 #endif
+    uint64_t packet_buffer_size;
+    server.cfg.ifindex = -1;
+    server.cfg.do_unload = false;
+//    server.cfg.xdp_flags = 0;
+    strcpy(server.cfg.filename,"/home/ljkim/xdp/xdp_redis/src/af_xdp_kern.o");
+    //strcpy(server.cfg.filename,"/home/ljkim/xdp/pmem-redis/src/af_xdp_kern.o");
+    strcpy(server.cfg.progsec,"xdp_sock");
+    //server.cfg.xsk_if_queue = 0; 
+    server.cfg.xsk_bind_flags &= XDP_COPY;
+    int xsks_map_fd;
+    struct bpf_object *bpf_obj = NULL;
+    
+    server.cfg.xsk_bind_flags |= XDP_ZEROCOPY;
+    server.cfg.ifname = (char *)server.cfg.ifname_buf;
+    strncpy(server.cfg.ifname, "eno2", IF_NAMESIZE);
+    server.cfg.ifindex = if_nametoindex(server.cfg.ifname);
+
+    /* Load custom program if configured */
+    if (server.cfg.filename[0] != 0) {
+        struct bpf_map *map;
+
+        bpf_obj = load_bpf_and_xdp_attach(&server.cfg);
+        if (!bpf_obj) {
+            /* Error handling done in load_bpf_and_xdp_attach() */
+            exit(EXIT_FAILURE);
+        }   
+
+        /* We also need to load the xsks_map */
+        map = bpf_object__find_map_by_name(bpf_obj, "xsks_map");
+        xsks_map_fd = bpf_map__fd(map);
+        if (xsks_map_fd < 0) {
+            fprintf(stderr, "ERROR: no xsks map found: %s\n",
+                strerror(xsks_map_fd));
+            exit(EXIT_FAILURE);
+        }   
+    }   
+
+    packet_buffer_size = NUM_FRAMES * FRAME_SIZE;
+    
+    if (posix_memalign(&server.packet_buffer,
+               getpagesize(), /* PAGE_SIZE aligned */
+               packet_buffer_size)) {
+        fprintf(stderr, "ERROR: Can't allocate buffer memory \"%s\"\n",
+            strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    /* Initialize shared packet_buffer for umem usage */
+    server.umem = configure_xsk_umem(server.packet_buffer, packet_buffer_size);
+    /* Open and configure the AF_XDP (xsk) socket */
+    server.xsk_socket = xsk_configure_socket(&server.cfg, server.umem);
+    
+//    while(1)
+//        handle_receive_packets(server.xsk_socket);
+    //rx_and_process(&server.cfg, server.xsk_socket);
+#endif
+
+
+
+
 
 }
 

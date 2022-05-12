@@ -35,7 +35,6 @@
 #define __SDS_H
 
 #define SDS_MAX_PREALLOC (1024*1024)
-
 #include <sys/types.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -223,7 +222,34 @@ static inline void sdssetalloc(sds s, size_t newlen) {
 
 #ifdef USE_NVM
 size_t sdsheadersize(const sds s);
-sds sdsmvtonvm(const sds s);
+//sds sdsmvtonvm(const sds s);
+//#include "server.h"
+#if 0
+
+static __always_inline sds sdsmvtonvm(const sds s)
+{
+    if(server.nvm_base && !is_nvm_addr(s))
+    {
+        size_t header_size = sdsheadersize(s);
+        size_t total_size = header_size + sdsalloc(s) + 1;
+        if(total_size >= server.sdsmv_threshold)
+        {
+            void* new_sh = nvm_malloc(total_size);
+            if(!new_sh)
+            {
+                //serverLog(LL_WARNING, "Can't allocate on NVM. Keep data in memory.");
+                return s;
+            }
+            void* sh = s - header_size;
+            size_t used_size = header_size + sdslen(s) + 1;
+            pmem_memcpy_persist(new_sh, sh, used_size);
+            zfree(sh);
+            return (char*)new_sh + header_size;
+        }
+    }
+    return s;
+}
+#endif
 sds sdsmvtodram(const sds s);
 
 sds sdsnewlennvm(const void *init, size_t initlen);

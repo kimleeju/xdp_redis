@@ -35,11 +35,25 @@
 #include <stdlib.h>
 #include <memkind.h>
 #include <memkind/internal/memkind_pmem.h>
-
+//#include "server.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 int is_nvm_addr(const void* ptr);
+#if 0
+
+int is_nvm_addr(const void* ptr){
+    if(!server.nvm_base)
+        return 0;
+    if((const char*)ptr < server.nvm_base)
+        return 0;
+    if(server.nvm_base + server.nvm_size <= (const char*)ptr)
+        return 0;
+    return 1;
+}
+#endif
+//int is_nvm_addr(const void* ptr);
 void* nvm_malloc(size_t size);
 int nvm_free(void* ptr);
 size_t nvm_usable_size(void* ptr);

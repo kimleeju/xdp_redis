@@ -50,7 +50,7 @@
 #include <lua.h>
 #include <signal.h>
 #include <stdarg.h>
-
+#include <sys/time.h>
 typedef long long mstime_t; /* millisecond time type. */
 
 #include "ae.h"      /* Event driven programming library */
@@ -76,7 +76,12 @@ typedef long long mstime_t; /* millisecond time type. */
 #include "crc64.h"
 
 #ifdef __XDP_H
+#ifndef _AF_XDP_KERN_H
 #include "af_xdp_user.h"
+#endif
+#ifdef _AF_XDP_KERN_H
+#include "../common/common_defines.h"
+#endif
 #endif
 
 
@@ -1442,7 +1447,16 @@ void moduleAcquireGIL(void);
 void moduleReleaseGIL(void);
 
 /* Utils */
-long long ustime(void);
+//long long ustime(void);
+static __always_inline long long ustime(void) {
+    struct timeval tv;
+    long long ust;
+
+    gettimeofday(&tv, NULL);
+    ust = ((long long)tv.tv_sec)*1000000;
+    ust += tv.tv_usec;
+    return ust;
+}
 long long mstime(void);
 void getRandomHexChars(char *p, unsigned int len);
 uint64_t crc64(uint64_t crc, const unsigned char *s, uint64_t l);
@@ -1658,6 +1672,64 @@ void openChildInfoPipe(void);
 void closeChildInfoPipe(void);
 void sendChildInfo(int process_type);
 void receiveChildInfo(void);
+
+extern void *pmem_memcpy_persist(void *pmemdest, const void *src, size_t len);
+extern void* nvm_malloc(size_t size);
+extern int is_nvm_addr(const void* ptr);
+#if 0
+static __always_inline int is_nvm_addr(const void* ptr){
+    if(!server.nvm_base)
+        return 0;
+    if((const char*)ptr < server.nvm_base)
+        return 0;
+    if(server.nvm_base + server.nvm_size <= (const char*)ptr)
+        return 0;
+    return 1;
+}
+#endif
+#ifdef __XDP_H
+
+#if 0
+static __always_inline int is_nvm_addr(const void* ptr){
+#if 0
+    if(!server.nvm_base)
+        return 0;
+    if((const char*)ptr < server.nvm_base)
+        return 0;
+    if(server.nvm_base + server.nvm_size <= (const char*)ptr)
+        return 0;
+    return 1;
+#endif
+}
+#endif
+static __always_inline sds sdsmvtonvm(const sds s)
+{
+    if(server.nvm_base && !is_nvm_addr(s))
+    {
+#if 0
+
+        size_t header_size = sdsheadersize(s);
+        size_t total_size = header_size + sdsalloc(s) + 1;
+        if(total_size >= server.sdsmv_threshold)
+        {
+            void* new_sh = nvm_malloc(total_size);
+            if(!new_sh)
+            {
+                //serverLog(LL_WARNING, "Can't allocate on NVM. Keep data in memory.");
+                return s;
+            }
+            void* sh = s - header_size;
+            size_t used_size = header_size + sdslen(s) + 1;
+            pmem_memcpy_persist(new_sh, sh, used_size);
+            zfree(sh);
+            return (char*)new_sh + header_size;
+        }
+    
+#endif
+    }
+    return s;
+}
+#endif
 
 /* Sorted sets data type */
 

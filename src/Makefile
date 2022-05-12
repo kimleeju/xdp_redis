@@ -70,21 +70,6 @@ $(COMMON_OBJS): %.o: %.h
 	make -C $(COMMON_DIR)
 
 
-$(XDP_OBJ): %.o: %.c  Makefile $(KERN_USER_H) $(EXTRA_DEPS) $(OBJECT_LIBBPF)
-	$(CLANG) -S \
-	    -target bpf \
-	    -D __BPF_TRACING__ \
-	    $(BPF_CFLAGS) \
-	    -Wall \
-	    -Wno-unused-value \
-	    -Wno-pointer-sign \
-	    -Wno-compare-distinct-pointer-types \
-	    -Werror \
-        -I../deps/lua/src \
-	    -O2 -emit-llvm -c -g -o ${@:.o=.ll} $<
-	$(LLC) -march=bpf -filetype=obj -o $@ ${@:.o=.ll}
-
-
 #-I../deps/lua/src \
 
 
@@ -241,6 +226,9 @@ ifeq ($(FAST_SDSFREE), yes)
 	FINAL_CFLAGS += -DFAST_SDSFREE
 endif
 
+
+
+
 REDIS_CC=$(QUIET_CC)$(CC) $(FINAL_CFLAGS)
 REDIS_LD=$(QUIET_LINK)$(CC) $(FINAL_LDFLAGS)
 REDIS_INSTALL=$(QUIET_INSTALL)$(INSTALL)
@@ -261,25 +249,24 @@ endif
 
 REDIS_SERVER_NAME=redis-server
 REDIS_SENTINEL_NAME=redis-sentinel
-REDIS_SERVER_OBJ=adlist.o quicklist.o print.o ae.o af_xdp_user.o anet.o dict.o server.o sds.o zmalloc.o lzf_c.o lzf_d.o pqsort.o zipmap.o sha1.o ziplist.o release.o networking.o util.o object.o db.o replication.o rdb.o t_string.o t_list.o t_set.o t_zset.o t_hash.o config.o aof.o pubsub.o multi.o debug.o sort.o intset.o syncio.o cluster.o crc16.o endianconv.o slowlog.o scripting.o bio.o rio.o rand.o memtest.o crc64.o bitops.o sentinel.o notify.o setproctitle.o blocked.o hyperloglog.o latency.o sparkline.o redis-check-rdb.o redis-check-aof.o geo.o lazyfree.o module.o evict.o expire.o geohash.o geohash_helper.o childinfo.o defrag.o siphash.o rax.o nvm.o 
+REDIS_SERVER_OBJ=adlist.o quicklist.o print.o ae.o anet.o dict.o server.o sds.o af_xdp_user.o zmalloc.o lzf_c.o lzf_d.o pqsort.o zipmap.o sha1.o ziplist.o release.o networking.o util.o object.o db.o replication.o rdb.o t_string.o t_list.o t_set.o t_zset.o t_hash.o config.o aof.o pubsub.o multi.o debug.o sort.o intset.o syncio.o cluster.o crc16.o endianconv.o slowlog.o scripting.o bio.o rio.o rand.o memtest.o crc64.o bitops.o sentinel.o notify.o setproctitle.o blocked.o hyperloglog.o latency.o sparkline.o redis-check-rdb.o redis-check-aof.o geo.o lazyfree.o module.o evict.o expire.o geohash.o geohash_helper.o childinfo.o defrag.o siphash.o rax.o nvm.o af_xdp_user.o 
 
 ifeq ($(AEP_COW),yes)
     REDIS_SERVER_OBJ += nvm_cow.o
 endif
 
 REDIS_CLI_NAME=redis-cli
-REDIS_CLI_OBJ=anet.o adlist.o redis-cli.o zmalloc.o release.o anet.o print.o ae.o af_xdp_user.o crc64.o
+REDIS_CLI_OBJ=anet.o adlist.o redis-cli.o zmalloc.o release.o anet.o print.o ae.o crc64.o af_xdp_user.o
 REDIS_BENCHMARK_NAME=redis-benchmark
 REDIS_BENCHMARK_SEQ_NAME=redis-benchmark-seq
-REDIS_BENCHMARK_OBJ=print.o ae.o anet.o redis-benchmark.o adlist.o zmalloc.o redis-benchmark.o af_xdp_user.o 
+REDIS_BENCHMARK_OBJ=print.o ae.o anet.o redis-benchmark.o adlist.o zmalloc.o redis-benchmark.o af_xdp_user.o
 REDIS_BENCHMARK_SEQ_OBJ=print.o ae.o anet.o redis-benchmark-seq.o adlist.o zmalloc.o redis-benchmark-seq.o af_xdp_user.o
 REDIS_CHECK_RDB_NAME=redis-check-rdb
 REDIS_CHECK_AOF_NAME=redis-check-aof
 #REDIS_CHECK_AOF_OBJ=redis-check-aof.o
 
 
-TARGETS = $(REDIS_SERVER_NAME) $(REDIS_CHECK_RDB_NAME) $(REDIS_BENCHMARK_NAME) $(REDIS_BENCHMARK_SEQ_NAME) $(REDIS_CLI_NAME) $(REDIS_CHECK_AOF_NAME)  $(REDIS_SENTINEL_NAME) $(XDP_OBJ)
-
+TARGETS = $(REDIS_SERVER_NAME) $(REDIS_CHECK_RDB_NAME) $(REDIS_BENCHMARK_NAME) $(REDIS_BENCHMARK_SEQ_NAME) $(REDIS_CLI_NAME) $(REDIS_CHECK_AOF_NAME)  $(REDIS_SENTINEL_NAME) $(REDIS_BENCHMARK_NAME) $(XDP_OBJ)
 all: $(TARGETS)
 	@echo ""
 	@echo "Hint: It's a good idea to run 'make test' ;)"
@@ -343,6 +330,7 @@ $(REDIS_CHECK_AOF_NAME): $(REDIS_SERVER_NAME)
 $(REDIS_CLI_NAME): $(OBJECT_LIBBPF) $(REDIS_CLI_OBJ)
 	$(REDIS_LD) -o $@ $^ ../deps/hiredis/libhiredis.a ../deps/linenoise/linenoise.o $(filter-out -lpmem, $(filter-out -lmemkind, $(FINAL_LIBS))) \
 	 $< $(LIBS)
+
 # redis-benchmark
 $(REDIS_BENCHMARK_NAME):$(OBJECT_LIBBPF) $(REDIS_BENCHMARK_OBJ)
 	$(REDIS_LD) -o $@ $^ ../deps/hiredis/libhiredis.a $(filter-out -lpmem, $(filter-out -lmemkind, $(FINAL_LIBS))) \
@@ -355,6 +343,23 @@ $(REDIS_BENCHMARK_SEQ_NAME): $(OBJECT_LIBBPF) $(REDIS_BENCHMARK_SEQ_OBJ)
 
 dict-benchmark: dict.c zmalloc.c sds.c siphash.c
 	$(REDIS_CC) $(FINAL_CFLAGS) $^ -D DICT_BENCHMARK_MAIN -o $@ $(FINAL_LIBS)
+
+$(XDP_OBJ): %.o: %.c $(REDIS_SERVER_OBJ) Makefile $(KERN_USER_H) $(EXTRA_DEPS) $(OBJECT_LIBBPF) $(COMMON_OBJS) 
+#$(XDP_OBJ): %.o: %.c Makefile $(KERN_USER_H) $(EXTRA_DEPS) $(OBJECT_LIBBPF) $(COMMON_OBJS) 
+	$(CLANG) -S \
+	    -target bpf \
+	    -D __BPF_TRACING__ \
+	    $(BPF_CFLAGS) \
+	    -Wall \
+	    -Wno-unused-value \
+	    -Wno-pointer-sign \
+	    -Wno-compare-distinct-pointer-types \
+	    -Werror \
+        -I../deps/jemalloc/include \
+        -I../deps/memkind/include \
+        -I../deps/lua/src \
+	    -O2 -emit-llvm -c -g -o ${@:.o=.ll} $<
+	$(LLC) -march=bpf -filetype=obj -o $@ ${@:.o=.ll}
 
 # Because the jemalloc.h header is generated as a part of the jemalloc build,
 # building it should complete before building any other object. Instead of

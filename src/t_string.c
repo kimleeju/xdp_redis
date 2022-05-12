@@ -106,7 +106,7 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
     if (expire) notifyKeyspaceEvent(NOTIFY_GENERIC,
         "expire",key,c->db->id);
     addReply(c, ok_reply ? ok_reply : shared.ok);
-   // printf("%s\n",c->buf);
+    // printf("%s\n",c->buf);
 }
 
 /* SET key value [NX] [XX] [EX <seconds>] [PX <milliseconds>] */

@@ -1,0 +1,2 @@
+SESS timestamp=2875137.375596941 pid=3042413 sid=729891c697787174 exename="/home/ljkim/xdp/xdp_redis/src/redis-server"
+TASK timestamp=2875137.375706839 tid=3042413 pid=3042413

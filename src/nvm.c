@@ -54,7 +54,7 @@
 
 static size_t used_nvm = 0;
 static size_t alloc_count = 0;
-
+#if 1
 int is_nvm_addr(const void* ptr) {
     if(!server.nvm_base)
         return 0;
@@ -64,7 +64,7 @@ int is_nvm_addr(const void* ptr) {
         return 0;
     return 1;
 }
-
+#endif
 void* nvm_malloc(size_t size) {
 #ifdef SUPPORT_PBA
     if(server.pba.loading)

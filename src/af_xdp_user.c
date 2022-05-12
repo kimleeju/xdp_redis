@@ -202,6 +202,8 @@ bool process_packet(struct xsk_socket_info *xsk,
         printf("%c",pkt[i]);
     }
     printf("\n");
+    //sdsmvtonvm(value);
+    //ustime();
 #endif
     //printf("server.port = %d\n",server.port);
     if( (pkt[74] == 'S' || pkt[74] == 's') && (pkt[75] == 'E' || pkt[75] == 'e') && (pkt[76] == 'T' || pkt[76] == 't')) {

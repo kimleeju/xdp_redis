@@ -1,18 +1,21 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 #include <linux/bpf.h>
-#include <linux/in.h>
+//#include <linux/in.h>
 #include <linux/if_ether.h>
-#include <bpf/bpf_helpers.h>
+#define _AF_XDP_KERN_H
+#define USE_NVM
+#include "server.h"
+//#include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
-
+#include "nvm.h"
 // The parsing helper functions from the packet01 lesson have moved here
 #include "../common/parsing_helpers.h"
 #include "../common/rewrite_helpers.h"
-
+#include <sys/time.h>
+#include <unistd.h>
 /* Defines xdp_stats_map */
 #include "../common/xdp_stats_kern_user.h"
 #include "../common/xdp_stats_kern.h"
-//#include "server.h"
 
 struct bpf_map_def SEC("maps") xsks_map = {
 	.type = BPF_MAP_TYPE_XSKMAP,
@@ -38,8 +41,8 @@ int xdp_sock_prog(struct xdp_md *ctx)
             return XDP_PASS;
     }
 #endif
-//    char buff[10] = "";
-
+    //char buff[10] = "";
+    //sds temp = "hello";
     int eth_type,ip_type;
     struct ethhdr *eth;
     struct iphdr *iphdr;
@@ -67,8 +70,39 @@ int xdp_sock_prog(struct xdp_md *ctx)
         }
 
         if(tcphdr->psh){
-                bpf_printk("aaaaaaaaa\n");
-//            buff[0] = '0'+index;
+
+            if(data_end < eth + offsetof(struct ethhdr, h_dest) + ETH_ALEN){
+                return XDP_PASS;
+            }
+//                bpf_printk("aaaaa\n");
+//                tmp, temp;
+                sds temp = "hello\n";
+                temp;
+            //    size_t sz;
+//                sds tmp = temp;
+//                char test[10]="hello\n";
+//                strcpy(test, data);
+//                sdsclear(temp);                  
+//                sdscmp(temp,"aaaaaaaaaaaaa\n");
+//                temp;
+                              
+                //sdsheadersize(temp);
+//                sds tmp = sdsmvtonvm(temp);  
+//sdsmvtonvm(temp); 
+//                sds tmp = sdsmvtonvm((sds)data);
+//                char* temp = "hello\n";
+//                tmp;                
+                //ustime();
+                sds tmp = sdsmvtonvm(temp);
+                tmp;
+                //                temp;
+                ((char*)data)[74] = 'g';
+//                void* ptr = server.pmem_kind;
+//                ptr;
+                //ustime();
+                //bpf_printk("server.port = %d\n",server.port);
+//   bpf_printk("buff = %s\n",buff);
+                //            buff[0] = '0'+index;
     //        if(tcphdr->syn || tcphdr->ack)
     //            return XDP_PASS;
 //            buff[1]='0'+tcphdr->syn;
