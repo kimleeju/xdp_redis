@@ -1254,7 +1254,9 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
      * releasing the GIL. Redis main thread will not touch anything at this
      * time. */
     if (moduleCount()) moduleReleaseGIL();
-
+#ifdef USE_XDP  
+    handle_receive_packets(server.xsk_socket); 
+#endif
 }
 
 /* This function is called immadiately after the event loop multiplexing
@@ -1900,7 +1902,6 @@ void * redisduplicatenvmaddr(void *addr) {
 #endif
 
 void initServer(void) {
-#ifdef __XDP_H
     int j;
 
     signal(SIGHUP, SIG_IGN);
@@ -2082,6 +2083,8 @@ void initServer(void) {
 #ifdef USE_NVM
     allocateNVMSpace();
 #endif
+    
+#ifdef USE_XDP
     uint64_t packet_buffer_size;
     server.cfg.ifindex = -1;
     server.cfg.do_unload = false;
@@ -2089,7 +2092,7 @@ void initServer(void) {
     strcpy(server.cfg.filename,"/home/ljkim/xdp/xdp_redis/src/af_xdp_kern.o");
     //strcpy(server.cfg.filename,"/home/ljkim/xdp/pmem-redis/src/af_xdp_kern.o");
     strcpy(server.cfg.progsec,"xdp_sock");
-    //server.cfg.xsk_if_queue = 0; 
+    server.cfg.xsk_if_queue = 0; 
     server.cfg.xsk_bind_flags &= XDP_COPY;
     int xsks_map_fd;
     struct bpf_object *bpf_obj = NULL;
@@ -4099,13 +4102,7 @@ int main(int argc, char **argv) {
 
     aeSetBeforeSleepProc(server.el,beforeSleep);
     aeSetAfterSleepProc(server.el,afterSleep);
-#ifndef __XDP_H
     aeMain(server.el);
-#endif
-
-#ifdef __XDP_H
-    aeMain(server.el,server.xsk_socket);
-#endif
     aeDeleteEventLoop(server.el);
     return 0;
 }

@@ -103,7 +103,7 @@ size_t sdsheadersize(const sds s)
     return sdsHdrSize(s[-1]);
 }
 #if 0
-static __always_inline sds sdsmvtonvm(const sds s)
+sds sdsmvtonvm(const sds s)
 {
     if(server.nvm_base && !is_nvm_addr(s))
     {

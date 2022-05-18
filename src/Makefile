@@ -70,11 +70,6 @@ $(COMMON_OBJS): %.o: %.h
 	make -C $(COMMON_DIR)
 
 
-#-I../deps/lua/src \
-
-
-
-
 
 
 
@@ -206,6 +201,13 @@ ifeq ($(USE_NVM),yes)
 	FAST_SDSFREE = yes
 endif
 
+
+ifeq ($(USE_XDP),yes)
+	FINAL_CFLAGS += -DUSE_XDP
+endif
+
+
+
 ifeq ($(AEP_COW),yes)
 	FINAL_CFLAGS += -DAEP_COW
 endif
@@ -249,7 +251,7 @@ endif
 
 REDIS_SERVER_NAME=redis-server
 REDIS_SENTINEL_NAME=redis-sentinel
-REDIS_SERVER_OBJ=adlist.o quicklist.o print.o ae.o anet.o dict.o server.o sds.o af_xdp_user.o zmalloc.o lzf_c.o lzf_d.o pqsort.o zipmap.o sha1.o ziplist.o release.o networking.o util.o object.o db.o replication.o rdb.o t_string.o t_list.o t_set.o t_zset.o t_hash.o config.o aof.o pubsub.o multi.o debug.o sort.o intset.o syncio.o cluster.o crc16.o endianconv.o slowlog.o scripting.o bio.o rio.o rand.o memtest.o crc64.o bitops.o sentinel.o notify.o setproctitle.o blocked.o hyperloglog.o latency.o sparkline.o redis-check-rdb.o redis-check-aof.o geo.o lazyfree.o module.o evict.o expire.o geohash.o geohash_helper.o childinfo.o defrag.o siphash.o rax.o nvm.o af_xdp_user.o 
+REDIS_SERVER_OBJ=adlist.o quicklist.o print.o ae.o anet.o dict.o af_xdp_user.o server.o sds.o af_xdp_user.o zmalloc.o lzf_c.o lzf_d.o pqsort.o zipmap.o sha1.o ziplist.o release.o networking.o util.o object.o db.o replication.o rdb.o t_string.o t_list.o t_set.o t_zset.o t_hash.o config.o aof.o pubsub.o multi.o debug.o sort.o intset.o syncio.o cluster.o crc16.o endianconv.o slowlog.o scripting.o bio.o rio.o rand.o memtest.o crc64.o bitops.o sentinel.o notify.o setproctitle.o blocked.o hyperloglog.o latency.o sparkline.o redis-check-rdb.o redis-check-aof.o geo.o lazyfree.o module.o evict.o expire.o geohash.o geohash_helper.o childinfo.o defrag.o siphash.o rax.o nvm.o 
 
 ifeq ($(AEP_COW),yes)
     REDIS_SERVER_OBJ += nvm_cow.o

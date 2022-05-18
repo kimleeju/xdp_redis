@@ -75,7 +75,7 @@ typedef long long mstime_t; /* millisecond time type. */
 #include "endianconv.h"
 #include "crc64.h"
 
-#ifdef __XDP_H
+#ifdef USE_XDP
 #ifndef _AF_XDP_KERN_H
 #include "af_xdp_user.h"
 #endif
@@ -922,7 +922,7 @@ struct clusterState;
 struct redisServer {
 
 #if 1 
-#ifdef __XDP_H
+#ifdef USE_XDP
     struct config cfg;
     void *packet_buffer;
     struct xsk_umem_info *umem;
@@ -1673,9 +1673,9 @@ void closeChildInfoPipe(void);
 void sendChildInfo(int process_type);
 void receiveChildInfo(void);
 
-extern void *pmem_memcpy_persist(void *pmemdest, const void *src, size_t len);
-extern void* nvm_malloc(size_t size);
-extern int is_nvm_addr(const void* ptr);
+//extern void *pmem_memcpy_persist(void *pmemdest, const void *src, size_t len);
+//extern void* nvm_malloc(size_t size);
+//extern int is_nvm_addr(const void* ptr);
 #if 0
 static __always_inline int is_nvm_addr(const void* ptr){
     if(!server.nvm_base)
@@ -1687,7 +1687,7 @@ static __always_inline int is_nvm_addr(const void* ptr){
     return 1;
 }
 #endif
-#ifdef __XDP_H
+#ifdef USE_XDP
 
 #if 0
 static __always_inline int is_nvm_addr(const void* ptr){
@@ -1702,6 +1702,7 @@ static __always_inline int is_nvm_addr(const void* ptr){
 #endif
 }
 #endif
+#if 0
 static __always_inline sds sdsmvtonvm(const sds s)
 {
     if(server.nvm_base && !is_nvm_addr(s))
@@ -1730,7 +1731,7 @@ static __always_inline sds sdsmvtonvm(const sds s)
     return s;
 }
 #endif
-
+#endif
 /* Sorted sets data type */
 
 /* Input flags. */

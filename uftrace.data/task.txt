@@ -1,2 +1,6 @@
-SESS timestamp=2875137.375596941 pid=3042413 sid=729891c697787174 exename="/home/ljkim/xdp/xdp_redis/src/redis-server"
-TASK timestamp=2875137.375706839 tid=3042413 pid=3042413
+SESS timestamp=4080472.879996179 pid=562115 sid=e1bb78a1d7ab6141 exename="/home/ljkim/xdp/xdp_redis/src/redis-server"
+TASK timestamp=4080472.880105195 tid=562115 pid=562115
+TASK timestamp=4080472.897617166 tid=562126 pid=562115
+TASK timestamp=4080472.897733838 tid=562127 pid=562115
+TASK timestamp=4080472.897739859 tid=562128 pid=562115
+TASK timestamp=4080472.897833559 tid=562129 pid=562115

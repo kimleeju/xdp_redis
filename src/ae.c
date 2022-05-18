@@ -42,10 +42,6 @@
 
 #include "ae.h"
 
-#ifdef __XDP_H
-#include "af_xdp_user.h"
-
-#endif
 
 #include "zmalloc.h"
 #include "config.h"
@@ -354,13 +350,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
  * the events that's possible to process without to wait are processed.
  *
  * The function returns the number of events processed. */
-#ifndef __XDP_H
 int aeProcessEvents(aeEventLoop *eventLoop, int flags)
-#endif
-
-#ifdef __XDP_H
-int aeProcessEvents(aeEventLoop *eventLoop, int flags, void* xsk)
-#endif
 {
     int processed = 0, numevents;
     /* Nothing to do? return ASAP */
@@ -412,10 +402,6 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags, void* xsk)
 
         /* Call the multiplexing API, will return only on timeout or when
          * some event fires. */
-#ifdef __XDP_H
-       handle_receive_packets((struct xsk_socket_info *)xsk); 
-       //printf("1111111111 server.pmem_kind = %p\n",server.pmem_kind);
-#endif
 
         numevents = aeApiPoll(eventLoop, tvp);
        // printf("numevents = %d\n",numevents);
@@ -473,23 +459,12 @@ int aeWait(int fd, int mask, long long milliseconds) {
         return retval;
     }
 }
-#ifndef __XDP_H
 void aeMain(aeEventLoop *eventLoop) {
-#endif
-
-#ifdef __XDP_H
-void aeMain(aeEventLoop *eventLoop, void* xsk) {
-#endif
     eventLoop->stop = 0;
     while (!eventLoop->stop) {
         if (eventLoop->beforesleep != NULL)
             eventLoop->beforesleep(eventLoop);
-#ifdef __XDP_H
-        aeProcessEvents(eventLoop, AE_ALL_EVENTS|AE_CALL_AFTER_SLEEP,( struct xsk_socket_info*) xsk);
-#endif
-#ifndef __XDP_H
         aeProcessEvents(eventLoop, AE_ALL_EVENTS|AE_CALL_AFTER_SLEEP);
-#endif
     }
 }
 

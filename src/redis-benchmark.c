@@ -502,13 +502,8 @@ static void benchmark(char *title, char *cmd, int len) {
     createMissingClients(c);
 
     config.start = mstime();
-#ifdef __XDP_H
-    aeMain(config.el,NULL);
-#endif
-#ifndef __XDP_H
     aeMain(config.el);
-#endif
-   config.totlatency = mstime()-config.start;
+    config.totlatency = mstime()-config.start;
 
     showLatencyReport();
     freeAllClients();
@@ -739,12 +734,7 @@ int main(int argc, const char **argv) {
         printf("Creating %d idle connections and waiting forever (Ctrl+C when done)\n", config.numclients);
         c = createClient("",0,NULL); /* will never receive a reply */
         createMissingClients(c);
-#ifdef __XDP_H
-        aeMain(config.el,NULL);
-#endif
-#ifndef __XDP_H
         aeMain(config.el);
-#endif
         /* and will wait for every */
     }
 

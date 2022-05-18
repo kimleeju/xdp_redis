@@ -32,9 +32,6 @@
 
 #ifndef __AE_H__
 #define __AE_H__
-
-#define __XDP_H
-
 #include <time.h>
 
 #define AE_OK 0
@@ -116,22 +113,11 @@ long long aeCreateTimeEvent(aeEventLoop *eventLoop, long long milliseconds,
         aeTimeProc *proc, void *clientData,
         aeEventFinalizerProc *finalizerProc);
 int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id);
-#ifndef __XDP_H
 int aeProcessEvents(aeEventLoop *eventLoop, int flags);
-#endif
-
-#ifdef __XDP_H
-int aeProcessEvents(aeEventLoop *eventLoop, int flags, void* xsk);
-#endif
 
 
 int aeWait(int fd, int mask, long long milliseconds);
-#ifdef __XDP_H
-void aeMain(aeEventLoop *eventLoop, void* xsk);
-#endif
-#ifndef __XDP_H
 void aeMain(aeEventLoop *eventLoop);
-#endif
 char *aeGetApiName(void);
 void aeSetBeforeSleepProc(aeEventLoop *eventLoop, aeBeforeSleepProc *beforesleep);
 void aeSetAfterSleepProc(aeEventLoop *eventLoop, aeBeforeSleepProc *aftersleep);

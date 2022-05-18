@@ -604,6 +604,7 @@ int clientHasPendingReplies(client *c) {
 #define MAX_ACCEPTS_PER_CALL 1000
 static void acceptCommonHandler(int fd, int flags, char *ip) {
     client *c;
+    printf("fd = %d\n",fd);
     if ((c = createClient(fd)) == NULL) {
         serverLog(LL_WARNING,
             "Error registering fd event for the new client: %s (fd=%d)",
@@ -673,6 +674,7 @@ static void acceptCommonHandler(int fd, int flags, char *ip) {
 }
 
 void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
+   
     int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
     char cip[NET_IP_STR_LEN];
     UNUSED(el);
@@ -1372,6 +1374,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     if (c->querybuf_peak < qblen) c->querybuf_peak = qblen;
     c->querybuf = sdsMakeRoomFor(c->querybuf, readlen);
     nread = read(fd, c->querybuf+qblen, readlen);
+    printf("%s\n",c->querybuf);
     if (nread == -1) {
         if (errno == EAGAIN) {
             return;
@@ -2020,12 +2023,7 @@ int processEventsWhileBlocked(void) {
     int count = 0;
     while (iterations--) {
         int events = 0;
-#ifndef __XDP_H
         events += aeProcessEvents(server.el, AE_FILE_EVENTS|AE_DONT_WAIT);
-#endif
-#ifdef __XDP_H
-        events += aeProcessEvents(server.el, AE_FILE_EVENTS|AE_DONT_WAIT, server.xsk_socket);
-#endif
         events += handleClientsWithPendingWrites();
         if (!events) break;
         count += events;

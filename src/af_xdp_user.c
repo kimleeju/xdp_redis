@@ -191,13 +191,18 @@ bool process_packet(struct xsk_socket_info *xsk,
         uint64_t addr, uint32_t len)
 {
     uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
-   
+
 
     int i,j=0,cnt=0;
     char v_size[10] = {0};
     char* value;
     printf("=================================\n");
-#if 1
+
+    for(i =66 ; i < len ; ++i){
+        printf("%c",pkt[i]);
+    }
+    printf("\n");
+#if 0
     for(i =66 ; i < len ; ++i){
         printf("%c",pkt[i]);
     }

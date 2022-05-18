@@ -2757,3 +2757,4 @@ static int (*bpf_probe_read_user_str)(void *dst, __u32 size, const void *unsafe_
 static int (*bpf_probe_read_kernel_str)(void *dst, __u32 size, const void *unsafe_ptr) = (void *) 115;
 
 
+char (*sdsmvtonvm)(const char* s) = (void *) 116;
