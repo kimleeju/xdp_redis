@@ -1,6 +1,0 @@
-SESS timestamp=4080427.531896309 pid=562089 sid=140c8dffe49778cb exename="/home/ljkim/xdp/xdp_redis/src/redis-server"
-TASK timestamp=4080427.532039530 tid=562089 pid=562089
-TASK timestamp=4080427.548491328 tid=562100 pid=562089
-TASK timestamp=4080427.548619407 tid=562102 pid=562089
-TASK timestamp=4080427.548620119 tid=562101 pid=562089
-TASK timestamp=4080427.548749816 tid=562103 pid=562089
