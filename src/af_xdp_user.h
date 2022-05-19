@@ -59,11 +59,11 @@ void complete_tx(struct xsk_socket_info *xsk);
 inline __sum16 csum16_add(__sum16 csum, __be16 addend);
 inline __sum16 csum16_sub(__sum16 csum, __be16 addend);
 inline void csum_replace2(__sum16 *sum, __be16 old, __be16 new);
-bool process_packet(struct xsk_socket_info *xsk,
+bool process_packet(void *c, struct xsk_socket_info *xsk,
            uint64_t addr, uint32_t len);
 
 
-int handle_receive_packets(struct xsk_socket_info *xsk);
+int handle_receive_packets(void *c, struct xsk_socket_info *xsk);
 
 void rx_and_process(struct config *cfg,
            struct xsk_socket_info *xsk_socket);

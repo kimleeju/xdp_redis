@@ -223,8 +223,7 @@ static inline void sdssetalloc(sds s, size_t newlen) {
 #ifdef USE_NVM
 size_t sdsheadersize(const sds s);
 
-char (*sdsmvtonvm)(const char* s);
-//sds sdsmvtonvm(const sds s);
+sds sdsmvtonvm(const sds s);
 //#include "server.h"
 #if 0
 static __always_inline sds sdsmvtonvm(const sds s)

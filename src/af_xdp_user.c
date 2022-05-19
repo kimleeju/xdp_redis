@@ -187,21 +187,37 @@ inline void csum_replace2(__sum16 *sum, __be16 old, __be16 new)
     *sum = ~csum16_add(csum16_sub(~(*sum), old), new);
 }
 
-bool process_packet(struct xsk_socket_info *xsk,
+bool process_packet(void* c, struct xsk_socket_info *xsk,
         uint64_t addr, uint32_t len)
 {
     uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
 
-
+//    client *cli = (client*) c;
     int i,j=0,cnt=0;
+    size_t qblen;
     char v_size[10] = {0};
     char* value;
     printf("=================================\n");
+    //c->querybuf = pkt+66;
+#if 0
+    sds data = (sds)malloc(strlen(pkt+66));
+    strcpy(data,pkt+66);
+    readQueryFromXDP(c);
+#endif
 
-    for(i =66 ; i < len ; ++i){
-        printf("%c",pkt[i]);
+//    qblen = sdslen(cli->querybuf);
+//    cli->querybuf = sdsMakeRoomFor(cli->querybuf, strlen(pkt+66));
+//    strcpy(cli->querybuf+qblen,pkt+66);
+    readQueryFromXDP(pkt+66,c);
+
+    //    printf("%s\n",data);
+#if 0
+    
+    for(i =0 ; i < len-66 ; ++i){
+        printf("%c",data[i]);
     }
     printf("\n");
+#endif
 #if 0
     for(i =66 ; i < len ; ++i){
         printf("%c",pkt[i]);
@@ -227,11 +243,11 @@ bool process_packet(struct xsk_socket_info *xsk,
             }
         }
         printf("value size = %d\n",atoi(v_size));
-        value = (char*)malloc(sizeof(char*)*(atoi(v_size)+1));
-        strncpy(value,pkt+i+2,atoi(v_size));
+//        value = (char*)malloc(sizeof(char*)*(atoi(v_size)+1));
+//        strncpy(value,pkt+i+2,atoi(v_size));
     }
     //printf("%s\n",value);
-    int port = server.port;
+//    int port = server.port;
 //    printf("server.pmem_kind = %p\n",server.pmem_kind);
 //    sds s = sdsmvtonvm(value);
 //    printf("sds = %s\n",s);
@@ -296,12 +312,11 @@ bool process_packet(struct xsk_socket_info *xsk,
 	return false;
 }
 
-int handle_receive_packets(struct xsk_socket_info *xsk)
+int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
 {
 	unsigned int rcvd, stock_frames, i;
 	uint32_t idx_rx = 0, idx_fq = 0;
-	int ret;
-
+    int ret;
     rcvd = xsk_ring_cons__peek(&xsk->rx, RX_BATCH_SIZE, &idx_rx);
     if (!rcvd)
 		return;
@@ -330,7 +345,7 @@ int handle_receive_packets(struct xsk_socket_info *xsk)
 		uint64_t addr = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx)->addr;
 		uint32_t len = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx++)->len;
 
-		if (!process_packet(xsk, addr, len))
+		if (!process_packet(c, xsk, addr, len))
 			xsk_free_umem_frame(xsk, addr);
 
 		xsk->stats.rx_bytes += len;
@@ -358,6 +373,6 @@ void rx_and_process(struct config *cfg,
 			if (ret <= 0 || ret > 1)
 				continue;
 		}
-		handle_receive_packets(xsk_socket);
+		//handle_receive_packets(xsk_socket);
 	}
 }

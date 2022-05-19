@@ -1255,7 +1255,7 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
      * time. */
     if (moduleCount()) moduleReleaseGIL();
 #ifdef USE_XDP  
-    handle_receive_packets(server.xsk_socket); 
+//    handle_receive_packets(server.xsk_socket); 
 #endif
 }
 
@@ -1743,6 +1743,29 @@ void checkTcpBacklogSettings(void) {
     fclose(fp);
 #endif
 }
+#define MAX_ACCEPTS_PER_CALL 1000
+#ifdef USE_XDP  
+void xdpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
+    int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
+    char cip[NET_IP_STR_LEN];
+    UNUSED(el);
+    UNUSED(mask);
+    UNUSED(privdata);
+    while(max--) {
+        cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
+        if (cfd == ANET_ERR) {
+            if (errno != EWOULDBLOCK)
+                serverLog(LL_WARNING,
+                    "Accepting client connection: %s", server.neterr);
+            return;
+        }
+        serverLog(LL_VERBOSE,"Accepted %s:%d", cip, cport);
+    
+        client *c = createClient(cfd);
+        handle_receive_packets(c,server.xsk_socket);
+    } 
+}
+#endif
 
 /* Initialize a set of file descriptors to listen to the specified 'port'
  * binding the addresses specified in the Redis server configuration.
@@ -2019,14 +2042,19 @@ void initServer(void) {
     /* Create an event handler for accepting new connections in TCP and Unix
      * domain sockets. */
     for (j = 0; j < server.ipfd_count; j++) {
-#if 1
+#ifdef USE_XDP
+        if (aeCreateFileEvent(server.el, server.ipfd[j], AE_READABLE,
+            xdpHandler,NULL) == AE_ERR)
+#else
         if (aeCreateFileEvent(server.el, server.ipfd[j], AE_READABLE,
             acceptTcpHandler,NULL) == AE_ERR)
+#endif
             {
                 serverPanic(
                     "Unrecoverable error creating server.ipfd file event.");
             }
-#endif
+
+    
     }
     if (server.sofd > 0 && aeCreateFileEvent(server.el,server.sofd,AE_READABLE,
         acceptUnixHandler,NULL) == AE_ERR) serverPanic("Unrecoverable error creating server.sofd file event.");
