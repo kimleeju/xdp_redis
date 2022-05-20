@@ -101,7 +101,7 @@ int xdp_sock_prog(struct xdp_md *ctx)
             
 //            ((char*)data)[87]='\n';
                    
-            bpf_printk("1111111111111111111\n");
+            bpf_printk("%s\n",data+66);
 //bpf_xdp_adjust_tail(ctx,-11);
 //            bpf_xdp_adjust_tail(ctx,-1);
 //            return XDP_PASS;

@@ -69,6 +69,7 @@ int listMatchObjects(void *a, void *b) {
 }
 
 client *createClient(int fd) {
+    printf("33333\n");
     client *c = zmalloc(sizeof(client));
     /* passing -1 as fd it is possible to create a non connected client.
      * This is useful since all the commands needs to be executed
@@ -603,6 +604,8 @@ int clientHasPendingReplies(client *c) {
 
 #define MAX_ACCEPTS_PER_CALL 1000
 static void acceptCommonHandler(int fd, int flags, char *ip) {
+ 
+    printf("2222222222\n");
     client *c;
     if ((c = createClient(fd)) == NULL) {
         serverLog(LL_WARNING,
@@ -670,9 +673,40 @@ static void acceptCommonHandler(int fd, int flags, char *ip) {
 
     server.stat_numconnections++;
     c->flags |= flags;
+#ifdef USE_XDP
+    handle_receive_packets(c,server.xsk_socket);
+#endif
 }
 
+#ifdef USE_XDP  
+void xdpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
+    printf("111111111111111\n");
+    int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
+    char cip[NET_IP_STR_LEN];
+    UNUSED(el);
+    UNUSED(mask);
+    UNUSED(privdata);
+    while(max--) {
+        cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
+        if (cfd == ANET_ERR) {
+            if (errno != EWOULDBLOCK)
+                serverLog(LL_WARNING,
+                    "Accepting client connection: %s", server.neterr);
+            return;
+        }
+        serverLog(LL_VERBOSE,"Accepted %s:%d", cip, cport);
+        acceptCommonHandler(cfd,0,cip);
+#if 0
+        client *c = createClient(cfd);
+        handle_receive_packets(c,server.xsk_socket);
+#endif
+    } 
+}
+#endif
+
+
 void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
+    printf("11111111111\n");
     int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
     char cip[NET_IP_STR_LEN];
     UNUSED(el);
@@ -1369,7 +1403,7 @@ void readQueryFromXDP(uint8_t* data, void *privdata) {
     qblen = sdslen(c->querybuf);
     c->querybuf = sdsMakeRoomFor(c->querybuf, strlen(data));
     strcpy(c->querybuf+qblen,data);
-    
+    printf("XDP = %s\n",c->querybuf); 
     nread = strlen(data);
     //readQueryFromXDP((void*)cli);
     

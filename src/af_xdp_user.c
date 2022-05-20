@@ -320,6 +320,7 @@ int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
     rcvd = xsk_ring_cons__peek(&xsk->rx, RX_BATCH_SIZE, &idx_rx);
     if (!rcvd)
 		return;
+    
     /* Stuff the ring with as much frames as possible */
 	stock_frames = xsk_prod_nb_free(&xsk->umem->fq,
 					xsk_umem_free_frames(xsk));
@@ -342,7 +343,8 @@ int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
 
 	/* Process received packets */
 	for (i = 0; i < rcvd; i++) {
-		uint64_t addr = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx)->addr;
+		printf("i = %d\n",i);
+        uint64_t addr = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx)->addr;
 		uint32_t len = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx++)->len;
 
 		if (!process_packet(c, xsk, addr, len))
