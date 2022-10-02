@@ -140,5 +140,16 @@ static __always_inline void swap_src_dst_ipv4(struct iphdr *iphdr)
 	iphdr->saddr = iphdr->daddr;
 	iphdr->daddr = tmp;
 }
+/*
+ * Swaps destination and source IPv4 addresses inside an IPv4 header
+ */
+static __always_inline void swap_src_dst_tcp(struct tcphdr *tcphdr)
+{
+	__be16 tmp = tcphdr->source;
+
+	tcphdr->source = tcphdr->dest;
+	tcphdr->dest = tmp;
+}
+
 
 #endif /* __REWRITE_HELPERS_H */

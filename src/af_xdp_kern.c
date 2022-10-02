@@ -26,7 +26,7 @@ SEC("xdp_sock")
 int xdp_sock_prog(struct xdp_md *ctx)
 {
     int index = ctx->rx_queue_index;
-    
+//    return XDP_PASS;
 #if 1
     __u32 *pkt_count;
 
@@ -68,18 +68,48 @@ int xdp_sock_prog(struct xdp_md *ctx)
         }
 
         if(tcphdr->psh){
-#if 1
+#if 0
             if(data_end < eth + offsetof(struct ethhdr, h_dest) + ETH_ALEN + 1){
 
-     //           bpf_printk("1111111111111111111\n");
+                bpf_printk("1111111111111111111\n");
 //                return bpf_redirect_map(&xsks_map, index, 0);
                 return XDP_DROP;
+                return XDP_PASS;
             }
-#endif          
+
+#endif      
+            //            bpf_printk("kernel Data received!");
+            bpf_printk("----------------------\n");
+//            return XDP_PASS;
+            return bpf_redirect_map(&xsks_map, index, 0);
+            bpf_printk("----------------------\n");
+            bpf_printk("SEQ = %u\n",tcphdr->seq);
+#if 1
+            
+            bpf_printk("Before iphdr->saddr = %d\n",iphdr->saddr);
+            bpf_printk("Before iphdr->daddr = %d\n",iphdr->daddr);
+            bpf_printk("Before tcphdr->source = %d\n",tcphdr->source);
+            bpf_printk("Before tcpdhr->dest = %d\n",tcphdr->dest);
+            swap_src_dst_tcp(tcphdr);
+            swap_src_dst_ipv4(iphdr);
+            swap_src_dst_mac(eth);
+            bpf_printk("After iphdr->saddr = %d\n",iphdr->saddr);
+            bpf_printk("After iphdr->daddr = %d\n",iphdr->daddr);
+            bpf_printk("After tcphdr->source = %d\n",tcphdr->source);
+            bpf_printk("After tcpdhr->dest = %d\n",tcphdr->dest);
+//            return XDP_DROP;
+            tcphdr->syn = 0;
+            tcphdr->ack = 1;
+            int d_size = data_end - data;
+            tcphdr->ack_seq = tcphdr->seq + d_size;
+#endif
+            return XDP_TX;
+//            return XDP_PASS;
+            return xdp_stats_record_action(ctx, XDP_TX);
 //                bpf_xdp_adjust_tail(ctx,-10);
 //                bpf_xdp_adjust_tail(ctx,0);
              //   bpf_xdp_adjust_tail(ctx,100);
-//                ((char*)data)[74] = 'g';
+                ((char*)data)[74] = 'g';
 //                ctx->data = (ctx->data)+80;
                 //data=data+80;
                 //bpf_printk("server.port = %d\n",server.port);

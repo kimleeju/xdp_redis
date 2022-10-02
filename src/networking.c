@@ -69,7 +69,6 @@ int listMatchObjects(void *a, void *b) {
 }
 
 client *createClient(int fd) {
-    printf("33333\n");
     client *c = zmalloc(sizeof(client));
     /* passing -1 as fd it is possible to create a non connected client.
      * This is useful since all the commands needs to be executed
@@ -216,7 +215,6 @@ int _addReplyToBuffer(client *c, const char *s, size_t len) {
 
     /* Check that the buffer has enough space available for this string. */
     if (len > available) return C_ERR;
-
     memcpy(c->buf+c->bufpos,s,len);
     c->bufpos+=len;
     return C_OK;
@@ -604,8 +602,6 @@ int clientHasPendingReplies(client *c) {
 
 #define MAX_ACCEPTS_PER_CALL 1000
 static void acceptCommonHandler(int fd, int flags, char *ip) {
- 
-    printf("2222222222\n");
     client *c;
     if ((c = createClient(fd)) == NULL) {
         serverLog(LL_WARNING,
@@ -680,7 +676,6 @@ static void acceptCommonHandler(int fd, int flags, char *ip) {
 
 #ifdef USE_XDP  
 void xdpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
-    printf("111111111111111\n");
     int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
     char cip[NET_IP_STR_LEN];
     UNUSED(el);
@@ -1403,8 +1398,9 @@ void readQueryFromXDP(uint8_t* data, void *privdata) {
     qblen = sdslen(c->querybuf);
     c->querybuf = sdsMakeRoomFor(c->querybuf, strlen(data));
     strcpy(c->querybuf+qblen,data);
-    printf("XDP = %s\n",c->querybuf); 
+//    printf("XDP = %s\n",c->querybuf); 
     nread = strlen(data);
+    printf("22222\n");
     //readQueryFromXDP((void*)cli);
     
     //qblen = sdslen(c->querybuf);
@@ -1493,6 +1489,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     if (c->querybuf_peak < qblen) c->querybuf_peak = qblen;
     c->querybuf = sdsMakeRoomFor(c->querybuf, readlen);
     nread = read(fd, c->querybuf+qblen, readlen);
+    printf("11111\n");
     printf("%s\n",c->querybuf);
     if (nread == -1) {
         if (errno == EAGAIN) {

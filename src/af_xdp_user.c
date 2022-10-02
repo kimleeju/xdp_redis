@@ -28,6 +28,19 @@
 #include <linux/ipv6.h>
 #include <linux/icmpv6.h>
 
+struct xsk_socket {
+    struct xsk_ring_cons *rx;
+    struct xsk_ring_prod *tx;
+    __u64 outstanding_tx;
+    struct xsk_umem *umem;
+    struct xsk_socket_config config;
+    int fd; 
+    int ifindex;
+    int prog_fd;
+    int xsks_map_fd;
+    __u32 queue_id;
+    char ifname[IFNAMSIZ];
+};
 
 inline __u32 xsk_ring_prod__free(struct xsk_ring_prod *r)
 {
@@ -191,14 +204,30 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
         uint64_t addr, uint32_t len)
 {
     uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
-
+    
+    int ret;
+    uint32_t tx_idx = 0;
+    uint8_t tmp_mac[ETH_ALEN];
+    struct in_addr tmp_ip;
+    struct ethhdr *eth = (struct ethhdr *) pkt;
+    struct iphdr *ipv = (struct iphdr *) (eth + 1);
+    struct tcphdr *tcphdr = (struct tcphdr *) (ipv + 1);
 //    client *cli = (client*) c;
-    int i,j=0,cnt=0;
-    size_t qblen;
-    char v_size[10] = {0};
-    char* value;
-    printf("=================================\n");
-    //c->querybuf = pkt+66;
+//    int i,j=0,cnt=0;
+//    size_t qblen;
+//    char v_size[10] = {0};
+//    char* value;
+    printf("Data received!!\n");
+    int cnt=0;
+    printf("i = %d\n",sizeof(struct ethhdr) + ipv->ihl*4);
+    for(int i = sizeof(struct ethhdr) + ipv->ihl*4 ; i < len ; ++i){
+    //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4 ; i < len ; ++i){
+        cnt++;
+        printf("%c",pkt[i]);
+    }
+    printf("\n");
+    printf("cnt = %d\n",cnt);
+   //c->querybuf = pkt+66;
 #if 0
     sds data = (sds)malloc(strlen(pkt+66));
     strcpy(data,pkt+66);
@@ -227,6 +256,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
     //ustime();
 #endif
     //printf("server.port = %d\n",server.port);
+#if 0
     if( (pkt[74] == 'S' || pkt[74] == 's') && (pkt[75] == 'E' || pkt[75] == 'e') && (pkt[76] == 'T' || pkt[76] == 't')) {
         for(i = 79 ; i < len ; ++i){
             if(pkt[i] == '$')
@@ -243,10 +273,11 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
             }
         }
         printf("value size = %d\n",atoi(v_size));
-//        value = (char*)malloc(sizeof(char*)*(atoi(v_size)+1));
+        //        value = (char*)malloc(sizeof(char*)*(atoi(v_size)+1));
 //        strncpy(value,pkt+i+2,atoi(v_size));
     }
     //printf("%s\n",value);
+#endif
 //    int port = server.port;
 //    printf("server.pmem_kind = %p\n",server.pmem_kind);
 //    sds s = sdsmvtonvm(value);
@@ -260,35 +291,73 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 	 *   ICMPV6_ECHO_REPLY
 	 * - Recalculate the icmp checksum */
 
-	if (false) {
-		int ret;
-		uint32_t tx_idx = 0;
-		uint8_t tmp_mac[ETH_ALEN];
-		struct in6_addr tmp_ip;
-		struct ethhdr *eth = (struct ethhdr *) pkt;
-		struct ipv6hdr *ipv6 = (struct ipv6hdr *) (eth + 1);
-		struct icmp6hdr *icmp = (struct icmp6hdr *) (ipv6 + 1);
+    if(true) {
 
-		if (ntohs(eth->h_proto) != ETH_P_IPV6 ||
-		    len < (sizeof(*eth) + sizeof(*ipv6) + sizeof(*icmp)) ||
-		    ipv6->nexthdr != IPPROTO_ICMPV6 ||
-		    icmp->icmp6_type != ICMPV6_ECHO_REQUEST)
-			return false;
-
-		memcpy(tmp_mac, eth->h_dest, ETH_ALEN);
+#if 1
+        memcpy(tmp_mac, eth->h_dest, ETH_ALEN);
 		memcpy(eth->h_dest, eth->h_source, ETH_ALEN);
 		memcpy(eth->h_source, tmp_mac, ETH_ALEN);
 
-		memcpy(&tmp_ip, &ipv6->saddr, sizeof(tmp_ip));
-		memcpy(&ipv6->saddr, &ipv6->daddr, sizeof(tmp_ip));
-		memcpy(&ipv6->daddr, &tmp_ip, sizeof(tmp_ip));
+		memcpy(&tmp_ip, &ipv->saddr, sizeof(tmp_ip));
+		memcpy(&ipv->saddr, &ipv->daddr, sizeof(tmp_ip));
+		memcpy(&ipv->daddr, &tmp_ip, sizeof(tmp_ip));
+#endif
+        u_int16_t tmp = tcphdr->source;
+        tcphdr->source = tcphdr->dest;
+        tcphdr->dest=tmp;
+        tcphdr->psh = 0;
+        tcphdr->syn = 0;
+//        tcphdr->th_off=6;
+        int d_size = len - (sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4);
+        //ipv->tot_len=htons(ntohs(ipv->tot_len)-);
+        ipv->tot_len=htons(ntohs(ipv->tot_len)-d_size);
+        
+        printf("tcphdr->doff = %d\n",tcphdr->doff);
+        tcphdr->ack_seq=htonl(ntohl(tcphdr->seq) + d_size);
+        //tcphdr->window = htons(ntohs(tcphdr->window)+8);
 
-		icmp->icmp6_type = ICMPV6_ECHO_REPLY;
+        printf("tcphdr->window = %u\n",ntohs(tcphdr->window));
+        printf("tcphdr->seq = %d\n",tcphdr->seq);
+        printf("ntohs(tcphdr->seq) = %u\n",ntohl(tcphdr->seq));
+        printf("tcphdr->ack_seq = %u\n",ntohl(tcphdr->ack_seq));
 
-		csum_replace2(&icmp->icmp6_cksum,
-			      htons(ICMPV6_ECHO_REQUEST << 8),
-			      htons(ICMPV6_ECHO_REPLY << 8));
+       // tcphdr->ack = tcphdr->seq + d_size;
+       // printf("tcphdr->ack_seq = %d\n",tcphdr->ack_seq);
+        //        bpf_xdp_adjust_tail((struct bpf_md*)pkt,-10);
+        //        printf("data = %d\n",tcphdr->th_off);
+       // tcphdr->ack_seq = tcphdr->seq + len -66;      
 
+        ret = xsk_ring_prod__reserve(&xsk->tx, 1, &tx_idx);
+        //printf("flags = %d\n",&xsk->xsk->config.xdp_flags);
+
+        if (ret != 1) {
+			/* No more transmit slots, drop the packet */
+			return false;
+		}
+#if 0
+        void* buf = malloc(sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->off*4 + 1);
+        memcpy(buf, xsk->umem->buffer, sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4);
+        xsk->umem->buffer = buf;
+        void* data = tcphdr + tcphdr->doff*4;
+#endif
+//        len-=sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4;
+        xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->addr = addr;
+        xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->len = len;
+		xsk_ring_prod__submit(&xsk->tx, 1);
+		xsk->outstanding_tx++;
+
+		xsk->stats.tx_bytes += len;
+		xsk->stats.tx_packets++;
+		return true;
+
+#if 0
+		icmp->icmp_type = ICMP_ECHO_REPLY;
+
+		csum_replace2(&icmp->icmp_cksum,
+			      htons(ICMP_ECHO_REQUEST << 8),
+			      htons(ICMP_ECHO_REPLY << 8));
+
+        printf("bbbbbbbbbbbbbb\n");
 		/* Here we sent the packet out of the receive port. Note that
 		 * we allocate one entry and schedule it. Your design would be
 		 * faster if you do batch processing/transmission */
@@ -299,6 +368,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 			return false;
 		}
 
+        printf("bbbbbbbbbbbbbb\n");
 		xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->addr = addr;
 		xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->len = len;
 		xsk_ring_prod__submit(&xsk->tx, 1);
@@ -307,7 +377,8 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 		xsk->stats.tx_bytes += len;
 		xsk->stats.tx_packets++;
 		return true;
-	}
+#endif
+    }
 
 	return false;
 }
@@ -320,7 +391,7 @@ int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
     rcvd = xsk_ring_cons__peek(&xsk->rx, RX_BATCH_SIZE, &idx_rx);
     if (!rcvd)
 		return;
-    
+    printf("rcvd rcvd rcvd = %d\n",rcvd);
     /* Stuff the ring with as much frames as possible */
 	stock_frames = xsk_prod_nb_free(&xsk->umem->fq,
 					xsk_umem_free_frames(xsk));
@@ -343,7 +414,6 @@ int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
 
 	/* Process received packets */
 	for (i = 0; i < rcvd; i++) {
-		printf("i = %d\n",i);
         uint64_t addr = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx)->addr;
 		uint32_t len = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx++)->len;
 

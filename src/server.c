@@ -2104,7 +2104,7 @@ void initServer(void) {
     server.cfg.ifname = (char *)server.cfg.ifname_buf;
     strncpy(server.cfg.ifname, "eno2", IF_NAMESIZE);
     server.cfg.ifindex = if_nametoindex(server.cfg.ifname);
-
+    server.cfg.xdp_flags &= ~(1U << 0);
     /* Load custom program if configured */
     if (server.cfg.filename[0] != 0) {
         struct bpf_map *map;

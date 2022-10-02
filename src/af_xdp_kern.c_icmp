@@ -1,0 +1,214 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+#include <linux/bpf.h>
+#include <linux/in.h>
+#include <linux/if_ether.h>
+#define _AF_XDP_KERN_H
+#define USE_NVM
+//#include "server.h"
+#include <bpf/bpf_helpers.h>
+#include <bpf/bpf_endian.h>
+// The parsing helper functions from the packet01 lesson have moved here
+#include "../common/parsing_helpers.h"
+#include "../common/rewrite_helpers.h"
+#include <sys/time.h>
+#include <unistd.h>
+/* Defines xdp_stats_map */
+#include "../common/xdp_stats_kern_user.h"
+#include "../common/xdp_stats_kern.h"
+struct bpf_map_def SEC("maps") xsks_map = {
+	.type = BPF_MAP_TYPE_XSKMAP,
+	.key_size = sizeof(int),
+	.value_size = sizeof(int),
+	.max_entries = 64,  /* Assume netdev has no more than 64 queues */
+};
+#if 1
+static __always_inline __u16 csum_fold_helper(__u32 csum)
+{
+    __u32 sum;
+    sum = (csum >> 16) + (csum & 0xffff);
+    sum += (sum >> 16);
+    return ~sum;
+}
+static __always_inline __u16 icmp_checksum_diff(
+        __u16 seed,
+        struct icmphdr_common *icmphdr_new,
+        struct icmphdr_common *icmphdr_old)
+{
+    __u32 csum, size = sizeof(struct icmphdr_common);
+
+    csum = bpf_csum_diff((__be32 *)icmphdr_old, size, (__be32 *)icmphdr_new, size, seed);
+    return csum_fold_helper(csum);
+}
+#endif
+SEC("xdp_sock")
+int xdp_sock_prog(struct xdp_md *ctx)
+{
+    int index = ctx->rx_queue_index;
+    
+#if 1
+    __u32 *pkt_count;
+
+    pkt_count = bpf_map_lookup_elem(&xdp_stats_map, &index);
+#if 0
+    if (pkt_count) {
+
+        /* We pass every other packet */
+        if ((*pkt_count)++ & 1)
+            return XDP_PASS;
+    }
+#endif
+    //char buff[10] = "";
+    //sds temp = "hello";
+    int eth_type,ip_type;
+    struct ethhdr *eth;
+    struct iphdr *iphdr;
+    struct tcphdr *tcphdr; 
+    int icmp_type;
+    __u16 echo_reply=0;
+    __u16 old_csum;
+    void *data_end = (void *)(long)ctx->data_end;
+    void *data = (void *)(long)ctx->data;
+    struct hdr_cursor nh = { .pos = data };
+    struct icmphdr_common *icmphdr;
+    struct icmphdr_common icmphdr_old;
+    eth_type = parse_ethhdr(&nh, data_end, &eth);
+ 
+    if (eth_type < 0) {
+        return XDP_PASS;
+    }
+    
+    if (eth_type == bpf_htons(ETH_P_IP)) {
+        ip_type = parse_iphdr(&nh, data_end, &iphdr);
+    }
+    else{
+        return XDP_PASS;
+    }
+
+    if (ip_type == IPPROTO_TCP) {
+
+        if (parse_tcphdr(&nh, data_end, &tcphdr) < 0) {
+            return XDP_PASS;
+        }
+
+        if(tcphdr->psh){
+#if 1
+            if(data_end < eth + offsetof(struct ethhdr, h_dest) + ETH_ALEN + 1){
+
+                bpf_printk("1111111111111111111\n");
+                return bpf_redirect_map(&xsks_map, index, 0);
+                return XDP_DROP;
+            }
+#endif    
+//                bpf_printk("222222222222222222\n");
+            icmp_type = parse_icmphdr_common(&nh, data_end, &icmphdr);
+            bpf_printk("icmp_type = %d\n",icmp_type);
+            //if (eth_type == bpf_htons(ETH_P_IP) && icmp_type == ICMP_ECHO) {
+            if (eth_type == bpf_htons(ETH_P_IP) && icmp_type == ICMP_ECHO) {
+            //if (icmp_type == ICMP_ECHO) {
+            //if (eth_type == bpf_htons(ETH_P_IP)) {
+                /* Swap IP source and destination */
+                swap_src_dst_ipv4(iphdr);
+                echo_reply = ICMP_ECHOREPLY;
+            }
+            else{
+                bpf_printk("3333333333333333\n");
+                return XDP_PASS;
+            }
+            /* Swap Ethernet source and destination */
+            swap_src_dst_mac(eth);
+            bpf_printk("444444444444444\n");
+
+#if 1
+            /* Patch the packet and update the checksum.*/
+            old_csum = icmphdr->cksum;
+            icmphdr->cksum = 0;
+            icmphdr_old = *icmphdr;
+            icmphdr->type = echo_reply;
+            icmphdr->cksum = icmp_checksum_diff(~old_csum, icmphdr, &icmphdr_old);
+           
+#endif
+//            bpf_printk("----------------------\n");
+//            bpf_printk("SEQ = %u\n",tcphdr->seq);
+#if 0
+            
+            bpf_printk("Before iphdr->saddr = %d\n",iphdr->saddr);
+            bpf_printk("Before iphdr->daddr = %d\n",iphdr->daddr);
+            bpf_printk("Before tcphdr->source = %d\n",tcphdr->source);
+            bpf_printk("Before tcpdhr->dest = %d\n",tcphdr->dest);
+            swap_src_dst_tcp(tcphdr);
+            swap_src_dst_ipv4(iphdr);
+            swap_src_dst_mac(eth);
+            bpf_printk("After iphdr->saddr = %d\n",iphdr->saddr);
+            bpf_printk("After iphdr->daddr = %d\n",iphdr->daddr);
+            bpf_printk("After tcphdr->source = %d\n",tcphdr->source);
+            bpf_printk("After tcpdhr->dest = %d\n",tcphdr->dest);
+//            return XDP_DROP;
+//            tcphdr->syn = 0;
+            tcphdr->ack = 1;
+            int d_size = data_end - data;
+            tcphdr->ack_seq = tcphdr->seq + d_size;
+#endif
+//            return XDP_TX;
+//            return XDP_PASS;
+            return xdp_stats_record_action(ctx, XDP_TX);
+//                bpf_xdp_adjust_tail(ctx,-10);
+//                bpf_xdp_adjust_tail(ctx,0);
+             //   bpf_xdp_adjust_tail(ctx,100);
+//                ((char*)data)[74] = 'g';
+//                ctx->data = (ctx->data)+80;
+                //data=data+80;
+                //bpf_printk("server.port = %d\n",server.port);
+//   bpf_printk("buff = %s\n",buff);
+                //            buff[0] = '0'+index;
+    //        if(tcphdr->syn || tcphdr->ack)
+//                return XDP_PASS;
+//            buff[1]='0'+tcphdr->syn;
+//            buff[2]='0'+tcphdr->ack;
+//            buff[3]='0'+tcphdr->fin;
+//            buff[4]='0'+tcphdr->psh;
+//            buff[5]='0'+tcphdr->rst;
+//            buff[6]='0'+tcphdr->urg;
+            //return XDP_PASS;
+//            bpf_trace_printk(buff, sizeof(buff));
+                          
+            //if(data_end >= eth + offsetof(struct ethhdr, h_dest) + ETH_ALEN)
+            //    return XDP_DROP;
+            
+//            ((char*)data)[87]='\n';
+                   
+            bpf_printk("%s\n",data+66);
+//bpf_xdp_adjust_tail(ctx,-11);
+//            bpf_xdp_adjust_tail(ctx,-1);
+//            return XDP_PASS;
+            return bpf_redirect_map(&xsks_map, index, 0);
+        }
+#if 0        
+
+        if(tcphdr->psh)
+            return bpf_redirect_map(&xsks_map, index, 0);
+        else
+            return XDP_PASS;
+#endif
+    }
+//    else if(ip_type == IPPROTO_UDP)
+
+//        return bpf_redirect_map(&xsks_map, index, 0);
+    return XDP_PASS;
+}
+
+
+    /* A set entry here means that the correspnding queue_id
+     * has an active AF_XDP socket bound to it. */
+//    if (bpf_map_lookup_elem(&xsks_map, &index))
+//        return bpf_redirect_map(&xsks_map, index, 0);
+    //return XDP_DROP;
+
+//    return XDP_PASS;
+
+
+//out:
+    //return xdp_stats_record_action(ctx, action);
+//}
+
+#endif
+char _license[] SEC("license") = "GPL";
