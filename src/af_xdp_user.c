@@ -42,6 +42,93 @@ struct xsk_socket {
     char ifname[IFNAMSIZ];
 };
 
+struct Pseudoheader{
+    uint32_t srcIP;
+    uint32_t destIP;
+    uint8_t reserved;
+    uint8_t protocol;
+    uint16_t TCPLen;
+};
+
+#define CARRY 65536
+uint16_t calculate(uint16_t* data, int dataLen)
+{
+    uint16_t result;
+    int tempChecksum=0;
+    int length;
+    bool flag=false;
+    if((dataLen%2)==0)
+        length=dataLen/2;
+    else
+    {
+        length=(dataLen/2)+1;
+        flag=true;
+    }
+
+    for (int i = 0; i < length; ++i) // cal 2byte unit
+    {
+       
+
+        if(i==length-1&&flag) //last num is odd num
+            tempChecksum+=ntohs(data[i]&0x00ff);
+        else
+            tempChecksum+=ntohs(data[i]);
+
+        if(tempChecksum>CARRY)
+                tempChecksum=(tempChecksum-CARRY)+1;
+
+    }
+
+    result=tempChecksum;
+    return result;
+}
+uint16_t calIPChecksum(uint8_t* data)
+{
+    struct iphdr* iph=(struct iphdr*)data;
+    iph->check=0;//set Checksum field 0
+
+    uint16_t checksum=calculate((uint16_t*)iph,iph->ihl*4);
+    iph->check=htons(checksum^0xffff);//xor checksum
+
+    return checksum;
+}
+void compute_tcp_checksum(struct iphdr *pIph, unsigned short *ipPayload) {
+    register unsigned long sum = 0;
+    unsigned short tcpLen = ntohs(pIph->tot_len) - (pIph->ihl<<2);
+    struct tcphdr *tcphdrp = (struct tcphdr*)(ipPayload);
+    //add the pseudo header 
+    //the source ip
+    sum += (pIph->saddr>>16)&0xFFFF;
+    sum += (pIph->saddr)&0xFFFF;
+    //the dest ip
+    sum += (pIph->daddr>>16)&0xFFFF;
+    sum += (pIph->daddr)&0xFFFF;
+    //protocol and reserved: 6
+    sum += htons(IPPROTO_TCP);
+    //the length
+    sum += htons(tcpLen);
+ 
+    //add the IP payload
+    //initialize checksum to 0
+    tcphdrp->check = 0;
+    while (tcpLen > 1) {
+        sum += * ipPayload++;
+        tcpLen -= 2;
+    }
+    //if any bytes left, pad the bytes and add
+    if(tcpLen > 0) {
+        //printf("+++++++++++padding, %dn", tcpLen);
+        sum += ((*ipPayload)&htons(0xFF00));
+    }
+      //Fold 32-bit sum to 16 bits: add carrier to result
+      while (sum>>16) {
+          sum = (sum & 0xffff) + (sum >> 16);
+      }
+      sum = ~sum;
+    //set computation result
+    tcphdrp->check = (unsigned short)sum;
+}
+
 inline __u32 xsk_ring_prod__free(struct xsk_ring_prod *r)
 {
     r->cached_cons = *r->consumer + r->size;
@@ -199,12 +286,12 @@ inline void csum_replace2(__sum16 *sum, __be16 old, __be16 new)
 {
     *sum = ~csum16_add(csum16_sub(~(*sum), old), new);
 }
-
 bool process_packet(void* c, struct xsk_socket_info *xsk,
         uint64_t addr, uint32_t len)
 {
     uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
     
+    readQueryFromXDP(pkt+66,c);
     int ret;
     uint32_t tx_idx = 0;
     uint8_t tmp_mac[ETH_ALEN];
@@ -219,15 +306,38 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 //    char* value;
     printf("Data received!!\n");
     int cnt=0;
-    printf("i = %d\n",sizeof(struct ethhdr) + ipv->ihl*4);
-    for(int i = sizeof(struct ethhdr) + ipv->ihl*4 ; i < len ; ++i){
+//    printf("i = %d\n",sizeof(struct ethhdr) + ipv->ihl*4);
+//    printf("ipv->ihl*4 = %d\n",ipv->ihl*4);
+    for(int i = 66 ; i < len ; i++){
+    //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 ; i < 66 ; i++){
     //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4 ; i < len ; ++i){
         cnt++;
         printf("%c",pkt[i]);
+#if 0
+        for(int j = 7 ; j >=0 ; --j){
+            int result=pkt[i] >> j & 1;
+            printf("%d",result);   
+        }
+#endif
+        //printf(" ");
     }
     printf("\n");
-    printf("cnt = %d\n",cnt);
-   //c->querybuf = pkt+66;
+    for(int i = 65 ; i >= 62 ; i--){
+    //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 ; i < 66 ; i++){
+    //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4 ; i < len ; ++i){
+        cnt++;
+//        printf("%c",pkt[i]);
+#if 0
+        for(int j = 7 ; j >=0 ; --j){
+            int result=pkt[i] >> j & 1;
+            printf("%d",result);   
+        }
+#endif
+        //printf(" ");
+    }
+//    printf("\n");
+//    printf("cnt = %d\n",cnt);
+    //c->querybuf = pkt+66;
 #if 0
     sds data = (sds)malloc(strlen(pkt+66));
     strcpy(data,pkt+66);
@@ -237,7 +347,6 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 //    qblen = sdslen(cli->querybuf);
 //    cli->querybuf = sdsMakeRoomFor(cli->querybuf, strlen(pkt+66));
 //    strcpy(cli->querybuf+qblen,pkt+66);
-    readQueryFromXDP(pkt+66,c);
 
     //    printf("%s\n",data);
 #if 0
@@ -290,9 +399,9 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 	 * - Just return all data with MAC/IP swapped, and type set to
 	 *   ICMPV6_ECHO_REPLY
 	 * - Recalculate the icmp checksum */
-
-    if(true) {
-
+    
+//    if(true) {
+    if(false) {
 #if 1
         memcpy(tmp_mac, eth->h_dest, ETH_ALEN);
 		memcpy(eth->h_dest, eth->h_source, ETH_ALEN);
@@ -302,31 +411,54 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 		memcpy(&ipv->saddr, &ipv->daddr, sizeof(tmp_ip));
 		memcpy(&ipv->daddr, &tmp_ip, sizeof(tmp_ip));
 #endif
+//        compute_ip_checksum(ipv);
+//        cal_checksum(ipv, len - sizeof(struct ethhdr));
+//        calIPChecksum(ipv);
+         
+        uint8_t temp;
+        for(int i = 58; i < 62 ; i++){
+            temp = pkt[i];
+            pkt[i] = pkt[i+4];
+            pkt[i+4] = temp;
+        }
+
         u_int16_t tmp = tcphdr->source;
         tcphdr->source = tcphdr->dest;
         tcphdr->dest=tmp;
         tcphdr->psh = 0;
-        tcphdr->syn = 0;
-//        tcphdr->th_off=6;
+        //        tcphdr->syn = 1;
+//        tcphdr->th_off=6;v
         int d_size = len - (sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4);
-        //ipv->tot_len=htons(ntohs(ipv->tot_len)-);
         ipv->tot_len=htons(ntohs(ipv->tot_len)-d_size);
+      
         
-        printf("tcphdr->doff = %d\n",tcphdr->doff);
-        tcphdr->ack_seq=htonl(ntohl(tcphdr->seq) + d_size);
-        //tcphdr->window = htons(ntohs(tcphdr->window)+8);
-
-        printf("tcphdr->window = %u\n",ntohs(tcphdr->window));
-        printf("tcphdr->seq = %d\n",tcphdr->seq);
-        printf("ntohs(tcphdr->seq) = %u\n",ntohl(tcphdr->seq));
-        printf("tcphdr->ack_seq = %u\n",ntohl(tcphdr->ack_seq));
+#if 1
+//        printf("tcphdr->doff = %d\n",tcphdr->doff);
+ 
+//        printf("1111111111111111111  checksum = %u\n",ntohs(tcphdr->check));
+//        printf("Before tcphdr->seq = %u\n",ntohl(tcphdr->seq));
+//        tcphdr->seq = htonl(10);
+//        printf("Befter tcphdr->ack_seq = %u\n",ntohl(tcphdr->ack_seq));
+       
+//        printf("After tcphdr->seq = %u\n",ntohl(tcphdr->seq));
+//        tcphdr->ack_seq=htonl(ntohl(tcphdr->seq) + d_size);
+//        printf("After tcphdr->ack_seq = %u\n",ntohl(tcphdr->ack_seq));
+//        tcphdr->window = htons(ntohs(tcphdr->window)+8);
+//        tcphdr->check = tcp_checksum(tcphdr, ipv);
+       // tcphdr->check = htons(calTCPChecksum(ipv, len - sizeof(struct ethhdr)));
+//        calTCPChecksum(ipv, len - sizeof(struct ethhdr));
+        //cal_checksum((u_short*)ipv, len - sizeof(struct ethhdr));
+        //printf("tcphdr->ack_seq = %u\n",ntohl(tcphdr->ack_seq));
 
        // tcphdr->ack = tcphdr->seq + d_size;
        // printf("tcphdr->ack_seq = %d\n",tcphdr->ack_seq);
         //        bpf_xdp_adjust_tail((struct bpf_md*)pkt,-10);
         //        printf("data = %d\n",tcphdr->th_off);
        // tcphdr->ack_seq = tcphdr->seq + len -66;      
-
+#endif
+        calIPChecksum(ipv);
+        compute_tcp_checksum(ipv, tcphdr);
+        //        printf("2222222222222222222222  checksum = %u\n",ntohs(tcphdr->check));
         ret = xsk_ring_prod__reserve(&xsk->tx, 1, &tx_idx);
         //printf("flags = %d\n",&xsk->xsk->config.xdp_flags);
 
@@ -342,13 +474,15 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 #endif
 //        len-=sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4;
         xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->addr = addr;
-        xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->len = len;
+        xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->len = len - d_size;
 		xsk_ring_prod__submit(&xsk->tx, 1);
 		xsk->outstanding_tx++;
 
-		xsk->stats.tx_bytes += len;
+		xsk->stats.tx_bytes += len - d_size;
 		xsk->stats.tx_packets++;
-		return true;
+
+
+        return true;
 
 #if 0
 		icmp->icmp_type = ICMP_ECHO_REPLY;
@@ -395,7 +529,7 @@ int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
     /* Stuff the ring with as much frames as possible */
 	stock_frames = xsk_prod_nb_free(&xsk->umem->fq,
 					xsk_umem_free_frames(xsk));
-	if (stock_frames > 0) {
+    if (stock_frames > 0) {
 
 		ret = xsk_ring_prod__reserve(&xsk->umem->fq, stock_frames,
 					     &idx_fq);
@@ -410,25 +544,29 @@ int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
 				xsk_alloc_umem_frame(xsk);
 
 		xsk_ring_prod__submit(&xsk->umem->fq, stock_frames);
-	}
-
+	}   
+    uint64_t addr;
+    uint32_t len;
 	/* Process received packets */
 	for (i = 0; i < rcvd; i++) {
-        uint64_t addr = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx)->addr;
-		uint32_t len = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx++)->len;
-
-		if (!process_packet(c, xsk, addr, len))
+	//for (i = rcvd-1; i < rcvd; i++) {
+        addr = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx)->addr;
+		len = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx++)->len;
+#if 0	
+        if (!process_packet(c, xsk, addr, len))
 			xsk_free_umem_frame(xsk, addr);
-
-		xsk->stats.rx_bytes += len;
+#endif	
+        xsk->stats.rx_bytes += len;
 	}
+
+    process_packet(c, xsk, addr, len);
 
 	xsk_ring_cons__release(&xsk->rx, rcvd);
 	xsk->stats.rx_packets += rcvd;
 
 	/* Do we need to wake up the kernel for transmission */
 	complete_tx(xsk);
-  }
+}
 
 void rx_and_process(struct config *cfg,
 			   struct xsk_socket_info *xsk_socket)
