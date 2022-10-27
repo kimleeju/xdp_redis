@@ -27,7 +27,6 @@
 #include <linux/if_ether.h>
 #include <linux/ipv6.h>
 #include <linux/icmpv6.h>
-
 struct xsk_socket {
     struct xsk_ring_cons *rx;
     struct xsk_ring_prod *tx;
@@ -41,7 +40,7 @@ struct xsk_socket {
     __u32 queue_id;
     char ifname[IFNAMSIZ];
 };
-
+/*
 struct Pseudoheader{
     uint32_t srcIP;
     uint32_t destIP;
@@ -49,6 +48,7 @@ struct Pseudoheader{
     uint8_t protocol;
     uint16_t TCPLen;
 };
+*/
 
 #define CARRY 65536
 uint16_t calculate(uint16_t* data, int dataLen)
@@ -291,7 +291,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 {
     uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
     
-    readQueryFromXDP(pkt+66,c);
+#if 1
     int ret;
     uint32_t tx_idx = 0;
     uint8_t tmp_mac[ETH_ALEN];
@@ -299,6 +299,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
     struct ethhdr *eth = (struct ethhdr *) pkt;
     struct iphdr *ipv = (struct iphdr *) (eth + 1);
     struct tcphdr *tcphdr = (struct tcphdr *) (ipv + 1);
+    bool p_flag;
 //    client *cli = (client*) c;
 //    int i,j=0,cnt=0;
 //    size_t qblen;
@@ -308,6 +309,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
     int cnt=0;
 //    printf("i = %d\n",sizeof(struct ethhdr) + ipv->ihl*4);
 //    printf("ipv->ihl*4 = %d\n",ipv->ihl*4);
+#if 0
     for(int i = 66 ; i < len ; i++){
     //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 ; i < 66 ; i++){
     //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4 ; i < len ; ++i){
@@ -322,6 +324,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
         //printf(" ");
     }
     printf("\n");
+#endif
     for(int i = 65 ; i >= 62 ; i--){
     //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 ; i < 66 ; i++){
     //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4 ; i < len ; ++i){
@@ -399,9 +402,8 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 	 * - Just return all data with MAC/IP swapped, and type set to
 	 *   ICMPV6_ECHO_REPLY
 	 * - Recalculate the icmp checksum */
-    
-//    if(true) {
-    if(false) {
+    if(true) {
+//    if(false) {
 #if 1
         memcpy(tmp_mac, eth->h_dest, ETH_ALEN);
 		memcpy(eth->h_dest, eth->h_source, ETH_ALEN);
@@ -425,19 +427,39 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
         u_int16_t tmp = tcphdr->source;
         tcphdr->source = tcphdr->dest;
         tcphdr->dest=tmp;
-        tcphdr->psh = 0;
-        //        tcphdr->syn = 1;
-//        tcphdr->th_off=6;v
-        int d_size = len - (sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4);
-        ipv->tot_len=htons(ntohs(ipv->tot_len)-d_size);
-      
         
+        int d_size = len - (sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4);
+        
+        if(tcphdr->psh){
+            p_flag=1;
+            tcphdr->psh = 0;
+    //        tcphdr->ack = 1;
+    //        tcphdr->th_off=6;v
+            ipv->tot_len=htons(ntohs(ipv->tot_len)-d_size);
+    //        tcphdr->ack_seq=htonl(ntohl(tcphdr->seq) + d_size);
+            
+            u_int32_t tmp_ack = tcphdr->ack_seq;
+            tcphdr->ack_seq=htonl(ntohl(tcphdr->seq) + d_size);
+            tcphdr->seq = tmp_ack; 
+        }
+        else if(tcphdr->fin){
+            p_flag=0;
+            printf("aaaaaaaaaaaaaa\n"); 
+        
+            u_int32_t tmp_ack = tcphdr->ack_seq;
+            tcphdr->ack_seq=htonl(ntohl(tcphdr->seq) + 1);
+            tcphdr->seq = tmp_ack; 
+
+        }
+        else{
+            printf("bbbbbbbbbbbbbbbb\n");
+        }
 #if 1
 //        printf("tcphdr->doff = %d\n",tcphdr->doff);
  
 //        printf("1111111111111111111  checksum = %u\n",ntohs(tcphdr->check));
 //        printf("Before tcphdr->seq = %u\n",ntohl(tcphdr->seq));
-//        tcphdr->seq = htonl(10);
+//        tcphdr->seq = tcphdr->ack_seq;
 //        printf("Befter tcphdr->ack_seq = %u\n",ntohl(tcphdr->ack_seq));
        
 //        printf("After tcphdr->seq = %u\n",ntohl(tcphdr->seq));
@@ -450,7 +472,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
         //cal_checksum((u_short*)ipv, len - sizeof(struct ethhdr));
         //printf("tcphdr->ack_seq = %u\n",ntohl(tcphdr->ack_seq));
 
-       // tcphdr->ack = tcphdr->seq + d_size;
+//        tcphdr->ack = tcphdr->seq + d_size;
        // printf("tcphdr->ack_seq = %d\n",tcphdr->ack_seq);
         //        bpf_xdp_adjust_tail((struct bpf_md*)pkt,-10);
         //        printf("data = %d\n",tcphdr->th_off);
@@ -480,8 +502,11 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 
 		xsk->stats.tx_bytes += len - d_size;
 		xsk->stats.tx_packets++;
-
-
+        
+        if(p_flag){
+            readQueryFromXDP(pkt+66,c);
+        }
+//        readQueryFromXDP(pkt+66,c);
         return true;
 
 #if 0
@@ -514,6 +539,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 #endif
     }
 
+#endif
 	return false;
 }
 
@@ -522,9 +548,15 @@ int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
 	unsigned int rcvd, stock_frames, i;
 	uint32_t idx_rx = 0, idx_fq = 0;
     int ret;
+
+    size_t entries = xsk_cons_nb_avail(&xsk->rx, RX_BATCH_SIZE);
+
     rcvd = xsk_ring_cons__peek(&xsk->rx, RX_BATCH_SIZE, &idx_rx);
+
+// ssm
     if (!rcvd)
 		return;
+    
     printf("rcvd rcvd rcvd = %d\n",rcvd);
     /* Stuff the ring with as much frames as possible */
 	stock_frames = xsk_prod_nb_free(&xsk->umem->fq,
@@ -552,20 +584,23 @@ int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
 	//for (i = rcvd-1; i < rcvd; i++) {
         addr = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx)->addr;
 		len = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx++)->len;
-#if 0	
+#if 1	
         if (!process_packet(c, xsk, addr, len))
 			xsk_free_umem_frame(xsk, addr);
 #endif	
         xsk->stats.rx_bytes += len;
 	}
-
-    process_packet(c, xsk, addr, len);
+    
+//    process_packet(c, xsk, addr, len);
 
 	xsk_ring_cons__release(&xsk->rx, rcvd);
 	xsk->stats.rx_packets += rcvd;
 
 	/* Do we need to wake up the kernel for transmission */
 	complete_tx(xsk);
+
+    entries = xsk_cons_nb_avail(&xsk->rx, RX_BATCH_SIZE);
+ //   printf("last entries : %d\n", entries);
 }
 
 void rx_and_process(struct config *cfg,

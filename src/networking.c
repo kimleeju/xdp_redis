@@ -1400,7 +1400,6 @@ void readQueryFromXDP(uint8_t* data, void *privdata) {
     strcpy(c->querybuf+qblen,data);
 //    printf("XDP = %s\n",c->querybuf); 
     nread = strlen(data);
-    printf("22222\n");
     //readQueryFromXDP((void*)cli);
     
     //qblen = sdslen(c->querybuf);

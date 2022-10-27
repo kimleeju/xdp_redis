@@ -2092,10 +2092,10 @@ void initServer(void) {
     server.cfg.ifindex = -1;
     server.cfg.do_unload = false;
 //    server.cfg.xdp_flags = 0;
-    strcpy(server.cfg.filename,"/home/ljkim/xdp/xdp_redis/src/af_xdp_kern.o");
+    strcpy(server.cfg.filename,"/home/smsin/xdp_redis/src/af_xdp_kern.o");
     //strcpy(server.cfg.filename,"/home/ljkim/xdp/pmem-redis/src/af_xdp_kern.o");
     strcpy(server.cfg.progsec,"xdp_sock");
-    server.cfg.xsk_if_queue = 0; 
+    server.cfg.xsk_if_queue = 1; 
     server.cfg.xsk_bind_flags &= XDP_COPY;
     int xsks_map_fd;
     struct bpf_object *bpf_obj = NULL;
