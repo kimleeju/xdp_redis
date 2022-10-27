@@ -27,6 +27,7 @@
 #include <linux/if_ether.h>
 #include <linux/ipv6.h>
 #include <linux/icmpv6.h>
+#if 0
 struct xsk_socket {
     struct xsk_ring_cons *rx;
     struct xsk_ring_prod *tx;
@@ -40,6 +41,7 @@ struct xsk_socket {
     __u32 queue_id;
     char ifname[IFNAMSIZ];
 };
+#endif
 /*
 struct Pseudoheader{
     uint32_t srcIP;
@@ -306,6 +308,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 //    char v_size[10] = {0};
 //    char* value;
     printf("Data received!!\n");
+    
     int cnt=0;
 //    printf("i = %d\n",sizeof(struct ethhdr) + ipv->ihl*4);
 //    printf("ipv->ihl*4 = %d\n",ipv->ihl*4);
@@ -504,7 +507,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 		xsk->stats.tx_packets++;
         
         if(p_flag){
-            readQueryFromXDP(pkt+66,c);
+ //           readQueryFromXDP(pkt+66,c);
         }
 //        readQueryFromXDP(pkt+66,c);
         return true;
@@ -543,16 +546,22 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 	return false;
 }
 
-int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
+int handle_receive_packets(void *el, int fd, void *c, int mask)
+//int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
 {
-	unsigned int rcvd, stock_frames, i;
+    UNUSED(el);
+    UNUSED(mask);
+    struct xsk_socket_info* xsk = ((client*)c)->xsk;
+    unsigned int rcvd = 0, stock_frames, i;
 	uint32_t idx_rx = 0, idx_fq = 0;
     int ret;
 
     size_t entries = xsk_cons_nb_avail(&xsk->rx, RX_BATCH_SIZE);
-
+    
+//    while(!rcvd){
     rcvd = xsk_ring_cons__peek(&xsk->rx, RX_BATCH_SIZE, &idx_rx);
-
+//    }
+    //rcvd = xsk_ring_cons__peek(&xsk->rx, RX_BATCH_SIZE, &idx_rx);
 // ssm
     if (!rcvd)
 		return;
@@ -599,8 +608,13 @@ int handle_receive_packets(void *c, struct xsk_socket_info *xsk)
 	/* Do we need to wake up the kernel for transmission */
 	complete_tx(xsk);
 
+    uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
+    readQueryFromXDP(pkt+66,c);
+
     entries = xsk_cons_nb_avail(&xsk->rx, RX_BATCH_SIZE);
  //   printf("last entries : %d\n", entries);
+
+    
 }
 
 void rx_and_process(struct config *cfg,

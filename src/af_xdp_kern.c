@@ -253,7 +253,7 @@ int xdp_sock_prog(struct xdp_md *ctx)
             return XDP_TX;
         }
 
-        if(tcphdr->psh || tcphdr->fin){
+        if(tcphdr->psh){
 #if 0
             if(data_end < eth + offsetof(struct ethhdr, h_dest) + ETH_ALEN + 1){
 
@@ -265,10 +265,10 @@ int xdp_sock_prog(struct xdp_md *ctx)
 
 #endif      
             //            bpf_printk("kernel Data received!");
-            bpf_printk("----------------------\n");
+            bpf_printk("aaaaaaaaaaaaaaaa\n");
 //            return XDP_PASS;
             return bpf_redirect_map(&xsks_map, index, 0);
-            bpf_printk("----------------------\n");
+            bpf_printk("zzzzzzzzzzzzzzzzzzz\n");
             bpf_printk("SEQ = %u\n",tcphdr->seq);
 #if 1
             

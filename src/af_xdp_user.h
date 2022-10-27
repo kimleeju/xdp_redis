@@ -15,6 +15,20 @@
 #define FRAME_SIZE         1<<14
 #define RX_BATCH_SIZE      64
 #define INVALID_UMEM_FRAME UINT64_MAX
+
+struct xsk_socket {
+    struct xsk_ring_cons *rx;
+    struct xsk_ring_prod *tx;
+    __u64 outstanding_tx;
+    struct xsk_umem *umem;
+    struct xsk_socket_config config;
+    int fd; 
+    int ifindex;
+    int prog_fd;
+    int xsks_map_fd;
+    __u32 queue_id;
+    char ifname[IFNAMSIZ];
+};
 struct xsk_umem_info {
 	struct xsk_ring_prod fq;
 	struct xsk_ring_cons cq;
@@ -62,7 +76,8 @@ bool process_packet(void *c, struct xsk_socket_info *xsk,
            uint64_t addr, uint32_t len);
 
 
-int handle_receive_packets(void *c, struct xsk_socket_info *xsk);
+int handle_receive_packets(void *el, int fd, void *c, int mask);
+//int handle_receive_packets(void *c, struct xsk_socket_info *xsk);
 
 void rx_and_process(struct config *cfg,
            struct xsk_socket_info *xsk_socket);

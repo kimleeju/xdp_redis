@@ -79,8 +79,18 @@ client *createClient(int fd) {
         anetEnableTcpNoDelay(NULL,fd);
         if (server.tcpkeepalive)
             anetKeepAlive(NULL,fd,server.tcpkeepalive);
+
+        
+#ifdef USE_XDP
+        c->xsk = (void*)server.xsk_socket;
+        if (aeCreateFileEvent(server.el,server.xsk_socket->xsk->fd,AE_READABLE,
+            handle_receive_packets, c) == AE_ERR)
+
+#else
         if (aeCreateFileEvent(server.el,fd,AE_READABLE,
             readQueryFromClient, c) == AE_ERR)
+    
+#endif
         {
             close(fd);
             zfree(c);
@@ -670,7 +680,7 @@ static void acceptCommonHandler(int fd, int flags, char *ip) {
     server.stat_numconnections++;
     c->flags |= flags;
 #ifdef USE_XDP
-    handle_receive_packets(c,server.xsk_socket);
+//    handle_receive_packets(c,server.xsk_socket);
 #endif
 }
 
@@ -681,6 +691,8 @@ void xdpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
     UNUSED(el);
     UNUSED(mask);
     UNUSED(privdata);
+    printf("aaaaaaaaaaaaaaa\n");
+
     while(max--) {
         cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
         if (cfd == ANET_ERR) {
@@ -690,6 +702,7 @@ void xdpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
             return;
         }
         serverLog(LL_VERBOSE,"Accepted %s:%d", cip, cport);
+        printf("bbbbbbbbbbbbbb\n");
         acceptCommonHandler(cfd,0,cip);
 #if 0
         client *c = createClient(cfd);
@@ -701,7 +714,6 @@ void xdpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
 
 
 void acceptTcpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
-    printf("11111111111\n");
     int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
     char cip[NET_IP_STR_LEN];
     UNUSED(el);
@@ -1398,7 +1410,7 @@ void readQueryFromXDP(uint8_t* data, void *privdata) {
     qblen = sdslen(c->querybuf);
     c->querybuf = sdsMakeRoomFor(c->querybuf, strlen(data));
     strcpy(c->querybuf+qblen,data);
-//    printf("XDP = %s\n",c->querybuf); 
+    printf("%s\n",c->querybuf); 
     nread = strlen(data);
     //readQueryFromXDP((void*)cli);
     

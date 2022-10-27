@@ -1,0 +1,18 @@
+5593a5f91000-5593a61e1000 r-xp 00000000 00:00 0                          /home/ljkim/xdp/xdp_redis/src/redis-server build-id:88dd81ccc294b220c2a4f3d7f3541fa87fcb6766
+7fda34440000-7fda34453000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libbz2.so.1.0.4 build-id:f8e13291f0c24f1c51bd2e7c50a3490f82f66d20
+7fda34453000-7fda3447c000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/liblzma.so.5.2.4 build-id:0e13b0f27b3bc79a2828c11199ce4336a348af37
+7fda3447c000-7fda34497000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 build-id:4abd133cc80e01bb388a9c42d9e3cb338836544a
+7fda34499000-7fda344b5000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libz.so.1.2.11 build-id:0c75f746ff8d9d30d6417d79b7732a66f5890a8b
+7fda344b5000-7fda34758000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libcapstone.so.3 build-id:66e1e7a4084e0cc2237bcc0f5b629f950164f8d3
+7fda34758000-7fda347b7000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libdw-0.176.so build-id:05da66984203b76c5e0d8cc917c157f6fdbf4b28
+7fda347b7000-7fda34996000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.28 build-id:c90e6603c7cdf84713cd445700a575d3ea446d9b
+7fda34999000-7fda349a3000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/librt-2.31.so build-id:b386b4646d93cd2e41ed3262de62e77531fb3902
+7fda349a3000-7fda34b91000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libc-2.31.so build-id:9fdb74e7b217d06c93172a8243f8547f947ee6d1
+7fda34b97000-7fda34bb6000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libpthread-2.31.so build-id:f0983025f0e0f327a6da752ff4ffa675e0be393f
+7fda34bba000-7fda34bd6000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libelf-0.176.so build-id:b02b0fa20986f756dc742b3a22d80d658906e2da
+7fda34bd6000-7fda34be3000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libnuma.so.1.0.0 build-id:11d464e8bec7cac21bef512bb706202f6850bdeb
+7fda34be3000-7fda34be9000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libdl-2.31.so build-id:0ce76e566928eeb22cbb5282b50d7689dbaa076d
+7fda34be9000-7fda34d38000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/libm-2.31.so build-id:d6bc45cb4b731e9bea973fdfe568b431f2eacbf9
+7fda34d5b000-7fda34d9d000 r-xp 00000000 00:00 0                          /usr/local/lib/libmcount-fast.so build-id:f4f7fccd1e917f3466f8c84dcbb857730bd8663d
+7fda34da1000-7fda34dd0000 r-xp 00000000 00:00 0                          /usr/lib/x86_64-linux-gnu/ld-2.31.so build-id:39bd4a6852f6b9962ad57117d11b6f130d32f7fd
+7ffd5503a000-7ffd5505b000 rw-p 00000000 00:00 0                          [stack]

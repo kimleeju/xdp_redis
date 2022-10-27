@@ -12,7 +12,7 @@ target triple = "bpf"
 
 @xdp_stats_map = dso_local global %struct.bpf_map_def { i32 6, i32 4, i32 16, i32 5, i32 0 }, section "maps", align 4, !dbg !0
 @xsks_map = dso_local global %struct.bpf_map_def { i32 17, i32 4, i32 4, i32 64, i32 0 }, section "maps", align 4, !dbg !53
-@__const.xdp_sock_prog.____fmt = private unnamed_addr constant [24 x i8] c"----------------------\0A\00", align 1
+@__const.xdp_sock_prog.____fmt = private unnamed_addr constant [18 x i8] c"aaaaaaaaaaaaaaaa\0A\00", align 1
 @_license = dso_local global [4 x i8] c"GPL\00", section "license", align 1, !dbg !63
 @llvm.used = appending global [4 x i8*] [i8* getelementptr inbounds ([4 x i8], [4 x i8]* @_license, i32 0, i32 0), i8* bitcast (i32 (%struct.xdp_md*)* @xdp_sock_prog to i8*), i8* bitcast (%struct.bpf_map_def* @xdp_stats_map to i8*), i8* bitcast (%struct.bpf_map_def* @xsks_map to i8*)], section "llvm.metadata"
 
@@ -21,7 +21,7 @@ define dso_local i32 @xdp_sock_prog(%struct.xdp_md* nocapture readonly %0) #0 se
   %2 = alloca [6 x i8], align 1
   call void @llvm.dbg.declare(metadata [6 x i8]* %2, metadata !197, metadata !DIExpression()), !dbg !205
   %3 = alloca i32, align 4
-  %4 = alloca [24 x i8], align 1
+  %4 = alloca [18 x i8], align 1
   call void @llvm.dbg.value(metadata %struct.xdp_md* %0, metadata !110, metadata !DIExpression()), !dbg !207
   %5 = bitcast i32* %3 to i8*, !dbg !208
   call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %5) #3, !dbg !208
@@ -265,12 +265,12 @@ define dso_local i32 @xdp_sock_prog(%struct.xdp_md* nocapture readonly %0) #0 se
   br i1 %125, label %131, label %126, !dbg !414
 
 126:                                              ; preds = %123
-  %127 = getelementptr inbounds [24 x i8], [24 x i8]* %4, i64 0, i64 0, !dbg !415
-  call void @llvm.lifetime.start.p0i8(i64 24, i8* nonnull %127) #3, !dbg !415
-  call void @llvm.dbg.declare(metadata [24 x i8]* %4, metadata !190, metadata !DIExpression()), !dbg !415
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(24) %127, i8* nonnull align 1 dereferenceable(24) getelementptr inbounds ([24 x i8], [24 x i8]* @__const.xdp_sock_prog.____fmt, i64 0, i64 0), i64 24, i1 false), !dbg !415
-  %128 = call i32 (i8*, i32, ...) inttoptr (i64 6 to i32 (i8*, i32, ...)*)(i8* nonnull %127, i32 24) #3, !dbg !415
-  call void @llvm.lifetime.end.p0i8(i64 24, i8* nonnull %127) #3, !dbg !416
+  %127 = getelementptr inbounds [18 x i8], [18 x i8]* %4, i64 0, i64 0, !dbg !415
+  call void @llvm.lifetime.start.p0i8(i64 18, i8* nonnull %127) #3, !dbg !415
+  call void @llvm.dbg.declare(metadata [18 x i8]* %4, metadata !190, metadata !DIExpression()), !dbg !415
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(18) %127, i8* nonnull align 1 dereferenceable(18) getelementptr inbounds ([18 x i8], [18 x i8]* @__const.xdp_sock_prog.____fmt, i64 0, i64 0), i64 18, i1 false), !dbg !415
+  %128 = call i32 (i8*, i32, ...) inttoptr (i64 6 to i32 (i8*, i32, ...)*)(i8* nonnull %127, i32 18) #3, !dbg !415
+  call void @llvm.lifetime.end.p0i8(i64 18, i8* nonnull %127) #3, !dbg !416
   %129 = load i32, i32* %3, align 4, !dbg !417, !tbaa !216
   call void @llvm.dbg.value(metadata i32 %129, metadata !111, metadata !DIExpression()), !dbg !207
   %130 = call i32 inttoptr (i64 51 to i32 (i8*, i32, i64)*)(i8* bitcast (%struct.bpf_map_def* @xsks_map to i8*), i32 %129, i64 0) #3, !dbg !418
@@ -315,10 +315,10 @@ attributes #3 = { nounwind }
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "xdp_stats_map", scope: !2, file: !93, line: 18, type: !55, isLocal: false, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 10.0.0-4ubuntu1 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !43, globals: !52, splitDebugInlining: false, nameTableKind: None)
-!3 = !DIFile(filename: "af_xdp_kern.c", directory: "/home/smsin/xdp_redis/src")
+!3 = !DIFile(filename: "af_xdp_kern.c", directory: "/home/ljkim/xdp/xdp_redis/src")
 !4 = !{!5, !14}
 !5 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "xdp_action", file: !6, line: 2845, baseType: !7, size: 32, elements: !8)
-!6 = !DIFile(filename: "../headers/linux/bpf.h", directory: "/home/smsin/xdp_redis/src")
+!6 = !DIFile(filename: "../headers/linux/bpf.h", directory: "/home/ljkim/xdp/xdp_redis/src")
 !7 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
 !8 = !{!9, !10, !11, !12, !13}
 !9 = !DIEnumerator(name: "XDP_ABORTED", value: 0, isUnsigned: true)
@@ -368,7 +368,7 @@ attributes #3 = { nounwind }
 !53 = !DIGlobalVariableExpression(var: !54, expr: !DIExpression())
 !54 = distinct !DIGlobalVariable(name: "xsks_map", scope: !2, file: !3, line: 21, type: !55, isLocal: false, isDefinition: true)
 !55 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "bpf_map_def", file: !56, line: 33, size: 160, elements: !57)
-!56 = !DIFile(filename: "../libbpf/src//build/usr/include/bpf/bpf_helpers.h", directory: "/home/smsin/xdp_redis/src")
+!56 = !DIFile(filename: "../libbpf/src//build/usr/include/bpf/bpf_helpers.h", directory: "/home/ljkim/xdp/xdp_redis/src")
 !57 = !{!58, !59, !60, !61, !62}
 !58 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !55, file: !56, line: 34, baseType: !7, size: 32)
 !59 = !DIDerivedType(tag: DW_TAG_member, name: "key_size", scope: !55, file: !56, line: 35, baseType: !7, size: 32, offset: 32)
@@ -383,7 +383,7 @@ attributes #3 = { nounwind }
 !68 = !DISubrange(count: 4)
 !69 = !DIGlobalVariableExpression(var: !70, expr: !DIExpression())
 !70 = distinct !DIGlobalVariable(name: "bpf_map_lookup_elem", scope: !2, file: !71, line: 33, type: !72, isLocal: true, isDefinition: true)
-!71 = !DIFile(filename: "../libbpf/src//build/usr/include/bpf/bpf_helper_defs.h", directory: "/home/smsin/xdp_redis/src")
+!71 = !DIFile(filename: "../libbpf/src//build/usr/include/bpf/bpf_helper_defs.h", directory: "/home/ljkim/xdp/xdp_redis/src")
 !72 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !73, size: 64)
 !73 = !DISubroutineType(types: !74)
 !74 = !{!44, !44, !75}
@@ -405,7 +405,7 @@ attributes #3 = { nounwind }
 !90 = !{!82, !44, !85, !91}
 !91 = !DIDerivedType(tag: DW_TAG_typedef, name: "__u64", file: !47, line: 31, baseType: !92)
 !92 = !DIBasicType(name: "long long unsigned int", size: 64, encoding: DW_ATE_unsigned)
-!93 = !DIFile(filename: "./../common/xdp_stats_kern.h", directory: "/home/smsin/xdp_redis/src")
+!93 = !DIFile(filename: "./../common/xdp_stats_kern.h", directory: "/home/ljkim/xdp/xdp_redis/src")
 !94 = !{i32 7, !"Dwarf Version", i32 4}
 !95 = !{i32 2, !"Debug Info Version", i32 3}
 !96 = !{i32 1, !"wchar_size", i32 4}
@@ -487,7 +487,7 @@ attributes #3 = { nounwind }
 !172 = !DILocalVariable(name: "data", scope: !98, file: !3, line: 152, type: !44)
 !173 = !DILocalVariable(name: "nh", scope: !98, file: !3, line: 153, type: !174)
 !174 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "hdr_cursor", file: !175, line: 33, size: 64, elements: !176)
-!175 = !DIFile(filename: "./../common/parsing_helpers.h", directory: "/home/smsin/xdp_redis/src")
+!175 = !DIFile(filename: "./../common/parsing_helpers.h", directory: "/home/ljkim/xdp/xdp_redis/src")
 !176 = !{!177}
 !177 = !DIDerivedType(tag: DW_TAG_member, name: "pos", scope: !174, file: !175, line: 34, baseType: !44, size: 64)
 !178 = !DILocalVariable(name: "tmp_ack", scope: !179, file: !3, line: 184, type: !183)
@@ -504,14 +504,14 @@ attributes #3 = { nounwind }
 !189 = !DILocalVariable(name: "old_daddr", scope: !179, file: !3, line: 203, type: !48)
 !190 = !DILocalVariable(name: "____fmt", scope: !191, file: !3, line: 268, type: !194)
 !191 = distinct !DILexicalBlock(scope: !192, file: !3, line: 268, column: 13)
-!192 = distinct !DILexicalBlock(scope: !193, file: !3, line: 256, column: 39)
+!192 = distinct !DILexicalBlock(scope: !193, file: !3, line: 256, column: 24)
 !193 = distinct !DILexicalBlock(scope: !181, file: !3, line: 256, column: 12)
-!194 = !DICompositeType(tag: DW_TAG_array_type, baseType: !66, size: 192, elements: !195)
+!194 = !DICompositeType(tag: DW_TAG_array_type, baseType: !66, size: 144, elements: !195)
 !195 = !{!196}
-!196 = !DISubrange(count: 24)
+!196 = !DISubrange(count: 18)
 !197 = !DILocalVariable(name: "h_tmp", scope: !198, file: !199, line: 115, type: !204)
 !198 = distinct !DISubprogram(name: "swap_src_dst_mac", scope: !199, file: !199, line: 113, type: !200, scopeLine: 114, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !202)
-!199 = !DIFile(filename: "./../common/rewrite_helpers.h", directory: "/home/smsin/xdp_redis/src")
+!199 = !DIFile(filename: "./../common/rewrite_helpers.h", directory: "/home/ljkim/xdp/xdp_redis/src")
 !200 = !DISubroutineType(types: !201)
 !201 = !{null, !117}
 !202 = !{!203, !197}
@@ -726,7 +726,7 @@ attributes #3 = { nounwind }
 !411 = !DILocation(line: 207, column: 27, scope: !179)
 !412 = !DILocation(line: 256, column: 20, scope: !193)
 !413 = !DILocation(line: 256, column: 12, scope: !193)
-!414 = !DILocation(line: 256, column: 24, scope: !193)
+!414 = !DILocation(line: 256, column: 12, scope: !181)
 !415 = !DILocation(line: 268, column: 13, scope: !191)
 !416 = !DILocation(line: 268, column: 13, scope: !192)
 !417 = !DILocation(line: 270, column: 48, scope: !192)
