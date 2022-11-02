@@ -722,9 +722,6 @@ typedef struct readyList {
  * Clients are taken in a linked list. */
 typedef struct client {
     uint64_t id;/* Client incremental unique ID. */
-#ifdef USE_XDP
-    void* xsk;
-#endif
     int fd;                 /* Client socket. */
     redisDb *db;            /* Pointer to currently SELECTed DB. */
     robj *name;             /* As set by CLIENT SETNAME. */
@@ -777,6 +774,10 @@ typedef struct client {
     /* Response buffer */
     int bufpos;
     char buf[PROTO_REPLY_CHUNK_BYTES];
+#ifdef USE_XDP
+    void* xsk;
+#endif
+
 } client;
 
 struct saveparam {

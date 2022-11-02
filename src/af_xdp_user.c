@@ -259,6 +259,7 @@ void complete_tx(struct xsk_socket_info *xsk)
             XSK_RING_CONS__DEFAULT_NUM_DESCS,
             &idx_cq);
 
+
     if (completed > 0) {
         for (int i = 0; i < completed; i++)
             xsk_free_umem_frame(xsk,
@@ -301,7 +302,6 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
     struct ethhdr *eth = (struct ethhdr *) pkt;
     struct iphdr *ipv = (struct iphdr *) (eth + 1);
     struct tcphdr *tcphdr = (struct tcphdr *) (ipv + 1);
-    bool p_flag;
 //    client *cli = (client*) c;
 //    int i,j=0,cnt=0;
 //    size_t qblen;
@@ -309,7 +309,6 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 //    char* value;
     printf("Data received!!\n");
     
-    int cnt=0;
 //    printf("i = %d\n",sizeof(struct ethhdr) + ipv->ihl*4);
 //    printf("ipv->ihl*4 = %d\n",ipv->ihl*4);
 #if 0
@@ -328,10 +327,8 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
     }
     printf("\n");
 #endif
-    for(int i = 65 ; i >= 62 ; i--){
     //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 ; i < 66 ; i++){
     //for(int i = sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4 ; i < len ; ++i){
-        cnt++;
 //        printf("%c",pkt[i]);
 #if 0
         for(int j = 7 ; j >=0 ; --j){
@@ -340,7 +337,6 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
         }
 #endif
         //printf(" ");
-    }
 //    printf("\n");
 //    printf("cnt = %d\n",cnt);
     //c->querybuf = pkt+66;
@@ -434,7 +430,6 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
         int d_size = len - (sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4);
         
         if(tcphdr->psh){
-            p_flag=1;
             tcphdr->psh = 0;
     //        tcphdr->ack = 1;
     //        tcphdr->th_off=6;v
@@ -446,7 +441,6 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
             tcphdr->seq = tmp_ack; 
         }
         else if(tcphdr->fin){
-            p_flag=0;
             printf("aaaaaaaaaaaaaa\n"); 
         
             u_int32_t tmp_ack = tcphdr->ack_seq;
@@ -454,9 +448,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
             tcphdr->seq = tmp_ack; 
 
         }
-        else{
-            printf("bbbbbbbbbbbbbbbb\n");
-        }
+ 
 #if 1
 //        printf("tcphdr->doff = %d\n",tcphdr->doff);
  
@@ -506,9 +498,6 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 		xsk->stats.tx_bytes += len - d_size;
 		xsk->stats.tx_packets++;
         
-        if(p_flag){
- //           readQueryFromXDP(pkt+66,c);
-        }
 //        readQueryFromXDP(pkt+66,c);
         return true;
 
