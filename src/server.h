@@ -776,6 +776,7 @@ typedef struct client {
     char buf[PROTO_REPLY_CHUNK_BYTES];
 #ifdef USE_XDP
     void* xsk;
+    robj *nVal;
 #endif
 
 } client;

@@ -929,6 +929,7 @@ void freeClientsInAsyncFreeQueue(void) {
 /* Write data in output buffers to client. Return C_OK if the client
  * is still valid after the call, C_ERR if it was freed. */
 int writeToClient(int fd, client *c, int handler_installed) {
+#if 0
     ssize_t nwritten = 0, totwritten = 0;
     size_t objlen;
     sds o;
@@ -1012,6 +1013,8 @@ int writeToClient(int fd, client *c, int handler_installed) {
         }
     }
     return C_OK;
+#endif
+            return C_ERR;
 }
 
 /* Write event handler. Just send data to the client. */
@@ -1407,11 +1410,74 @@ void readQueryFromXDP(uint8_t* data, void *privdata) {
         if (remaining < readlen) readlen = remaining;
     }
     
+    // command set인지, value size 보고
+    int cnt = 0;
+    int i, j = 0;
+    char v_size[10] = {0};
+    size_t data_len;
+    size_t temp;
+    size_t value_ptr;
+    bool SET = false;
+    if(( data[8] == 'S' || data[8] == 's') && (data[9] == 'E' || data[9] == 'e') && (data[10] == 'T' || data[10] == 't')) {
+        SET = true;
+        for(i = 13 ; i < strlen(data) ; ++i){
+            if(data[i] == '$')
+                cnt++;
+
+            if(cnt == 2){
+                temp = i;
+                while(1){
+                    v_size[j++]=data[++i];
+                    
+                    if(data[i] == '\r'){
+                        value_ptr = i+2;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+        data_len = atoi(v_size);
+        //printf("value size = %d\n", data_len);
+    }
+    //printf("%s\n",value);
+
+    if (SET && data_len >= 64)
+    {
+        
+    } 
+
+    //temp = strstr(data, "\n");
+    //command_cursor = strstr(temp+1, "\n");
+    //command_cursor += 1;
+    
+    //printf("strncmp : %d\n", strncmp(command_cursor, "set", 3));
+    //printf("%s\n",command_cursor); 
+
     qblen = sdslen(c->querybuf);
-    c->querybuf = sdsMakeRoomFor(c->querybuf, strlen(data));
-    strcpy(c->querybuf+qblen,data);
-    printf("%s\n",c->querybuf); 
-    nread = strlen(data);
+    c->querybuf = sdsMakeRoomFor(c->querybuf, temp + 7);
+            //strlen(data) - data_len);
+
+    strncpy(c->querybuf+qblen, data, temp+1);
+            //strlen(data) - data_len);
+#if 1
+    c->querybuf[temp+1] = '1';
+    c->querybuf[temp+2] = '\r';
+    c->querybuf[temp+3] = '\n';
+    c->querybuf[temp+4] = 'a';
+    c->querybuf[temp+5] = '\r';
+    c->querybuf[temp+6] = '\n';
+    c->querybuf[temp+7] = '\0';
+#endif
+
+    nread = temp+7;
+   
+    sds d_value = sdsnewlen(data+value_ptr,data_len);
+    sds n_value= sdsmvtonvm(d_value);
+    //robj *nVal = createRawStringObject(n_value, strlen(n_value));
+    robj *nVal = createObject(OBJ_STRING,n_value);
+
+    c->nVal = nVal;
     //readQueryFromXDP((void*)cli);
     
     //qblen = sdslen(c->querybuf);

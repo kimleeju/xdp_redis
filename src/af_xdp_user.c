@@ -293,7 +293,8 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
         uint64_t addr, uint32_t len)
 {
     uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
-    
+    readQueryFromXDP(pkt+66,c);
+
 #if 1
     int ret;
     uint32_t tx_idx = 0;
@@ -307,7 +308,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 //    size_t qblen;
 //    char v_size[10] = {0};
 //    char* value;
-    printf("Data received!!\n");
+    //printf("Data received!!\n");
     
 //    printf("i = %d\n",sizeof(struct ethhdr) + ipv->ihl*4);
 //    printf("ipv->ihl*4 = %d\n",ipv->ihl*4);
@@ -428,12 +429,19 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
         tcphdr->dest=tmp;
         
         int d_size = len - (sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4);
-        
+       
+        //char *ack = c->buf+c->sentlen;
+        //int ack_len = c->bufpos-c->sentlen;
+
+        // redis로부터 읽어와야함
+        char ack[5] = "+OK\r\n";
         if(tcphdr->psh){
-            tcphdr->psh = 0;
+            //ack = ((client*)c)->buf;
+            memcpy(pkt+66,ack,5);
+            tcphdr->psh = 1;
     //        tcphdr->ack = 1;
     //        tcphdr->th_off=6;v
-            ipv->tot_len=htons(ntohs(ipv->tot_len)-d_size);
+            ipv->tot_len=htons(ntohs(ipv->tot_len)-d_size + 5);
     //        tcphdr->ack_seq=htonl(ntohl(tcphdr->seq) + d_size);
             
             u_int32_t tmp_ack = tcphdr->ack_seq;
@@ -444,7 +452,7 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
             printf("aaaaaaaaaaaaaa\n"); 
         
             u_int32_t tmp_ack = tcphdr->ack_seq;
-            tcphdr->ack_seq=htonl(ntohl(tcphdr->seq) + 1);
+            tcphdr->ack_seq=htonl(ntohl(tcphdr->seq));
             tcphdr->seq = tmp_ack; 
 
         }
@@ -491,11 +499,11 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
 #endif
 //        len-=sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4;
         xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->addr = addr;
-        xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->len = len - d_size;
+        xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->len = len - d_size + 5;
 		xsk_ring_prod__submit(&xsk->tx, 1);
 		xsk->outstanding_tx++;
 
-		xsk->stats.tx_bytes += len - d_size;
+		xsk->stats.tx_bytes += len - d_size + 5;
 		xsk->stats.tx_packets++;
         
 //        readQueryFromXDP(pkt+66,c);
@@ -554,8 +562,7 @@ int handle_receive_packets(void *el, int fd, void *c, int mask)
 // ssm
     if (!rcvd)
 		return;
-    
-    printf("rcvd rcvd rcvd = %d\n",rcvd);
+    // printf("rcvd rcvd = %d\n", rcvd);
     /* Stuff the ring with as much frames as possible */
 	stock_frames = xsk_prod_nb_free(&xsk->umem->fq,
 					xsk_umem_free_frames(xsk));
@@ -597,8 +604,8 @@ int handle_receive_packets(void *el, int fd, void *c, int mask)
 	/* Do we need to wake up the kernel for transmission */
 	complete_tx(xsk);
 
-    uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
-    readQueryFromXDP(pkt+66,c);
+//    uint8_t *pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
+//    readQueryFromXDP(pkt+66,c);
 
     entries = xsk_cons_nb_avail(&xsk->rx, RX_BATCH_SIZE);
  //   printf("last entries : %d\n", entries);

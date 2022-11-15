@@ -90,6 +90,7 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
         addReply(c, abort_reply ? abort_reply : shared.nullbulk);
         return;
     }
+#ifndef USE_XDP
 #ifdef USE_NVM
     if(val->encoding == OBJ_ENCODING_RAW) {
         val->ptr = sdsmvtonvm(val->ptr);
@@ -98,6 +99,7 @@ void setGenericCommand(client *c, int flags, robj *key, robj *val, robj *expire,
         if(total_size >= server.sdsmv_threshold && !is_nvm_addr(val->ptr))
             val->need_mv_to_nvm = 1;
     }
+#endif
 #endif
     setKey(c->db,key,val);
     server.dirty++;
@@ -152,7 +154,11 @@ void setCommand(client *c) {
     }
 
     c->argv[2] = tryObjectEncoding(c->argv[2]);
+#ifdef USE_XDP
+    setGenericCommand(c,flags,c->argv[1],c->nVal,expire,unit,NULL,NULL);
+#else
     setGenericCommand(c,flags,c->argv[1],c->argv[2],expire,unit,NULL,NULL);
+#endif
 }
 
 void setnxCommand(client *c) {
