@@ -82,8 +82,23 @@ client *createClient(int fd) {
 
         
 #ifdef USE_XDP
-        c->xsk = (void*)server.xsk_socket;
-        if (aeCreateFileEvent(server.el,server.xsk_socket->xsk->fd,AE_READABLE,
+#if 0
+        if (posix_memalign(&server.packet_buffer[server.cli_num],
+                   getpagesize(), /* PAGE_SIZE aligned */
+                   NUM_FRAMES * FRAME_SIZE)) {
+            fprintf(stderr, "ERROR: Can't allocate buffer memory \"%s\"\n",
+                strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
+
+        server.umem[server.cli_num] = configure_xsk_umem(server.packet_buffer[server.cli_num], NUM_FRAMES * FRAME_SIZE);
+#endif
+        //server.cfg.xsk_if_queue = server.cli_num;
+        //printf("server.cli_num = %d\n",server.cli_num);
+        //c->xsk = (void*)xsk_configure_socket(&server.cfg, server.umem[server.cli_num]);
+        c->xsk = server.xsk[server.cli_num]; 
+        if (aeCreateFileEvent(server.el,((struct xsk_socket_info*)c->xsk)->xsk->fd,AE_READABLE,
             handle_receive_packets, c) == AE_ERR)
 
 #else
@@ -98,6 +113,7 @@ client *createClient(int fd) {
         }
     }
 
+    server.cli_num++;
     selectDb(c,0);
     uint64_t client_id;
     atomicGetIncr(server.next_client_id,client_id,1);
@@ -691,7 +707,6 @@ void xdpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
     UNUSED(el);
     UNUSED(mask);
     UNUSED(privdata);
-    printf("aaaaaaaaaaaaaaa\n");
 
     while(max--) {
         cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
@@ -702,7 +717,6 @@ void xdpHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
             return;
         }
         serverLog(LL_VERBOSE,"Accepted %s:%d", cip, cport);
-        printf("bbbbbbbbbbbbbb\n");
         acceptCommonHandler(cfd,0,cip);
 #if 0
         client *c = createClient(cfd);

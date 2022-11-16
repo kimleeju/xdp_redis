@@ -208,12 +208,12 @@ struct xsk_socket_info *xsk_configure_socket(struct config *cfg,
             &xsk_info->tx, &xsk_cfg);
 
     if (ret)
+    {printf("rrrrrrrrrrrr\n");
         goto error_exit;
-
+    }
     ret = bpf_get_link_xdp_id(cfg->ifindex, &prog_id, cfg->xdp_flags);
     if (ret)
         goto error_exit;
-
     /* Initialize umem frame allocation */
 
     for (i = 0; i < NUM_FRAMES; i++)
@@ -430,23 +430,26 @@ bool process_packet(void* c, struct xsk_socket_info *xsk,
         
         int d_size = len - (sizeof(struct ethhdr) + ipv->ihl*4 + tcphdr->doff*4);
        
-        //char *ack = c->buf+c->sentlen;
-        //int ack_len = c->bufpos-c->sentlen;
-
-        // redis로부터 읽어와야함
-        char ack[5] = "+OK\r\n";
         if(tcphdr->psh){
             //ack = ((client*)c)->buf;
-            memcpy(pkt+66,ack,5);
+            memcpy(pkt+66,((client*)c)->buf + ((client*)c)->sentlen,((client*)c)->bufpos-((client*)c)->sentlen);
+            //memcpy(pkt+66,ack,5);
+            
             tcphdr->psh = 1;
     //        tcphdr->ack = 1;
     //        tcphdr->th_off=6;v
-            ipv->tot_len=htons(ntohs(ipv->tot_len)-d_size + 5);
+            ipv->tot_len=htons(ntohs(ipv->tot_len)-d_size + ((client*)c)->bufpos-((client*)c)->sentlen);
     //        tcphdr->ack_seq=htonl(ntohl(tcphdr->seq) + d_size);
             
             u_int32_t tmp_ack = tcphdr->ack_seq;
             tcphdr->ack_seq=htonl(ntohl(tcphdr->seq) + d_size);
             tcphdr->seq = tmp_ack; 
+            ((client*)c)->sentlen += ((client*)c)->bufpos- ((client*)c)->sentlen;
+           
+            if ((int)(((client*)c)->sentlen) == ((client*)c)->bufpos) {
+                ((client*)c)->bufpos = 0;
+                ((client*)c)->sentlen = 0;
+            }
         }
         else if(tcphdr->fin){
             printf("aaaaaaaaaaaaaa\n"); 

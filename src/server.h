@@ -928,9 +928,11 @@ struct redisServer {
 
 #if 1 
 #ifdef USE_XDP
+    int cli_num;
     struct config cfg;
-    void *packet_buffer;
-    struct xsk_umem_info *umem;
+    void **packet_buffer;
+    struct xsk_umem_info **umem;
+    void **xsk;
     struct xsk_socket_info *xsk_socket;
 #endif
 #endif

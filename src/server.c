@@ -2057,18 +2057,35 @@ void initServer(void) {
     }   
 
     packet_buffer_size = NUM_FRAMES * FRAME_SIZE;
-    
-    if (posix_memalign(&server.packet_buffer,
-               getpagesize(), /* PAGE_SIZE aligned */
-               packet_buffer_size)) {
-        fprintf(stderr, "ERROR: Can't allocate buffer memory \"%s\"\n",
-            strerror(errno));
-        exit(EXIT_FAILURE);
+    int MAX_CLI = 40;
+    server.packet_buffer = (void*)malloc(sizeof(void*)*MAX_CLI);
+    server.umem = (struct xsk_umem_info**)malloc(sizeof(struct xsk_umem_info*)*MAX_CLI);
+    server.xsk = (void*)malloc(sizeof(void*)*MAX_CLI);
+    for(int i = 0; i <MAX_CLI; i++){
+#if 1
+        if (posix_memalign(&server.packet_buffer[i],
+                   getpagesize(), /* PAGE_SIZE aligned */
+                   packet_buffer_size)) {
+            fprintf(stderr, "ERROR: Can't allocate buffer memory \"%s\"\n",
+                strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        server.umem[i] = configure_xsk_umem(server.packet_buffer[i], NUM_FRAMES * FRAME_SIZE);
+        server.cfg.xsk_if_queue = i;
+        server.xsk[i] = (void*)xsk_configure_socket(&server.cfg, server.umem[i]);
+        //c->xsk = (void*)xsk_configure_socket(&server.cfg, server.umem[server.cli_num]);
     }
+#endif
     /* Initialize shared packet_buffer for umem usage */
-    server.umem = configure_xsk_umem(server.packet_buffer, packet_buffer_size);
+
+
+    server.cli_num = -1;
+
+    
+    //server.umem = configure_xsk_umem(server.packet_buffer, packet_buffer_size);
     /* Open and configure the AF_XDP (xsk) socket */
-    server.xsk_socket = xsk_configure_socket(&server.cfg, server.umem);
+    //server.xsk_socket = xsk_configure_socket(&server.cfg, server.umem);
    //김이주 여러개 
     for (j = 0; j < server.ipfd_count; j++) {
         printf("j = %d\n",j);

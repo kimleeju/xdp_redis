@@ -698,7 +698,6 @@ int xsk_socket__create(struct xsk_socket **xsk_ptr, const char *ifname,
 	} else {
 		sxdp.sxdp_flags = xsk->config.bind_flags;
 	}
-
 	err = bind(xsk->fd, (struct sockaddr *)&sxdp, sizeof(sxdp));
     if (err) {
         err = -errno;
